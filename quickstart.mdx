@@ -1,47 +1,46 @@
 ---
-title: "Quick Start"
-description: "Deploy the platform with Docker Compose, connect your first Shopee shop, sync products, and test a buyer redemption in under 30 minutes."
+title: Quick Start
+description: >-
+  Deploy the platform with Docker Compose, connect your first Shopee shop, sync
+  products, and test a buyer redemption in under 30 minutes.
 ---
-
 ## Run the platform locally
 
 Get the entire Shopee Auto Redeemer v2 platform running locally with Docker Compose. You will clone the repository, configure environment files, start the services, create your first seller, connect a Shopee shop, sync products, and verify the buyer redemption flow.
 
-<Callout kind="info">
+<Callout kind="info" collapsed="false">
+  **Prerequisites:**
 
-**Prerequisites:**
-
-- Docker and Docker Compose installed
-- A Shopee Open Platform partner account with a partner ID and partner key
-- Git installed and available in your terminal
-
+  - Docker and Docker Compose installed
+  - A Shopee Open Platform partner account with a partner ID and partner key
+  - Git installed and available in your terminal
 </Callout>
 
 <Steps>
-  <Step title="Clone the Repository" icon="git-branch">
+  <Step title="Clone the Repository" icon="git-branch" title-type="p">
     Clone the platform repository and move into its root directory.
 
-````bash
-git clone https://github.com/Wally-And-Cody/Shopee_AutoRedeemer_v2.git
-cd Shopee_AutoRedeemer_v2
-````
+    ```bash
+    git clone https://github.com/Wally-And-Cody/Shopee_AutoRedeemer_v2.git
+    cd Shopee_AutoRedeemer_v2
+    ```
 
     Your terminal is now positioned in the repository root, where the Docker Compose configuration is located.
   </Step>
 
-  <Step title="Configure Environment Files" icon="settings">
+  <Step title="Configure Environment Files" icon="settings" title-type="p">
     Each service provides an `.env.example` file. Copy each template to the corresponding `.env` file before starting the stack.
 
-````bash
-cp .env.example .env
-cp backend/.env.example backend/.env
-cp frontend/admin/.env.example frontend/admin/.env
-cp frontend/public/.env.example frontend/public/.env
-````
+    ```bash
+    cp .env.example .env
+    cp backend/.env.example backend/.env
+    cp frontend/admin/.env.example frontend/admin/.env
+    cp frontend/public/.env.example frontend/public/.env
+    ```
 
     Set the following critical variables. Keep secrets out of version control.
 
-    - **Root `.env`**: `POSTGRES_USER`, `POSTGRES_PASSWORD`
+    - **Root&#x20;****`.env`**: `POSTGRES_USER`, `POSTGRES_PASSWORD`
     - **`backend/.env`**: `JWT_SECRET_KEY` with at least 32 characters, `JWT_REFRESH_SECRET_KEY` with at least 32 characters, `PG_PASSWORD`, `SHOPEE_ENVIRONMENT_HOSTNAME`, `SHOPEE_REDIRECT_URI`, `ALLOWED_CORS_HOSTNAMES`, `PUBLIC_REDEMPTION_PORTAL_HOSTNAME`
     - **`frontend/admin/.env`**: `VITE_BACKEND_API_HOSTNAME=http://localhost:8080`
     - **`frontend/public/.env`**: `VITE_BACKEND_API_HOSTNAME=http://localhost:8080`
@@ -49,143 +48,142 @@ cp frontend/public/.env.example frontend/public/.env
     Confirm that every service has a populated `.env` file before continuing.
   </Step>
 
-  <Step title="Start the Stack" icon="play">
+  <Step title="Start the Stack" icon="play" title-type="p">
     Start the services in detached mode.
 
-````bash
-docker-compose up -d
-````
+    ```bash
+    docker-compose up -d
+    ```
 
     Docker Compose starts Redis on port `6379`, PostgreSQL on port `5435`, the backend on port `8080`, and the worker. The worker starts automatically when `TOKEN_REFRESH_WORKER=true` is set in `backend/.env`.
 
     Check the running containers with `docker-compose ps`. Each required service should report a running or healthy status.
   </Step>
 
-  <Step title="Create Your First Seller" icon="user-plus">
+  <Step title="Create Your First Seller" icon="user-plus" title-type="p">
     Use the sellers endpoint to create an administrator account, then log in to obtain a JWT.
 
-````bash
-# Create an admin seller
-curl -X POST http://localhost:8080/api/sellers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@example.com",
-    "password": "securepassword",
-    "name": "Admin User",
-    "role": "ADMIN"
-  }'
+    ```bash
+    # Create an admin seller
+    curl -X POST http://localhost:8080/api/sellers \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "admin@example.com",
+        "password": "securepassword",
+        "name": "Admin User",
+        "role": "ADMIN"
+      }'
 
-# Login to get a JWT
-curl -X POST http://localhost:8080/api/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@example.com",
-    "password": "securepassword"
-  }'
-````
+    # Login to get a JWT
+    curl -X POST http://localhost:8080/api/login \
+      -H "Content-Type: application/json" \
+      -d '{
+        "email": "admin@example.com",
+        "password": "securepassword"
+      }'
+    ```
 
     Save the JWT from the login response. Use it in the `Authorization` header for the remaining seller and shop requests.
   </Step>
 
-  <Step title="Create a Shop" icon="store">
+  <Step title="Create a Shop" icon="store" title-type="p">
     Register the Shopee shop against the seller account. Replace the partner credentials and shop ID with values from your Shopee Open Platform account.
 
-````bash
-curl -X POST http://localhost:8080/api/shops \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <YOUR_JWT>" \
-  -d '{
-    "seller_id": 1,
-    "shopee_partner_id": "123456",
-    "shopee_partner_key": "your-partner-key",
-    "shopee_shop_id": "67890"
-  }'
-````
+    ```bash
+    curl -X POST http://localhost:8080/api/shops \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <YOUR_JWT>" \
+      -d '{
+        "seller_id": 1,
+        "shopee_partner_id": "123456",
+        "shopee_partner_key": "your-partner-key",
+        "shopee_shop_id": "67890"
+      }'
+    ```
 
     A successful response confirms that the shop is associated with seller ID `1`.
   </Step>
 
-  <Step title="Authorize with Shopee" icon="link">
+  <Step title="Authorize with Shopee" icon="link" title-type="p">
     Request the Shopee authorization URL for the shop.
 
-````bash
-curl "http://localhost:8080/api/token/auth-url?shop_id=1" \
-  -H "Authorization: Bearer <YOUR_JWT>"
-````
+    ```bash
+    curl "http://localhost:8080/api/token/auth-url?shop_id=1" \
+      -H "Authorization: Bearer <YOUR_JWT>"
+    ```
 
     Open the returned authorization URL in a browser and approve access in Shopee. Shopee redirects to the configured callback URL, where the platform stores the shop's access and refresh tokens.
 
     After the redirect completes, the shop is authorized for product and order operations.
   </Step>
 
-  <Step title="Sync Products" icon="refresh-cw">
+  <Step title="Sync Products" icon="refresh-cw" title-type="p">
     Run the initial product sync in full mode. Use the JWT from the login response.
 
-````bash
-curl "http://localhost:8080/api/sync-products?mode=full&shop_id=1" \
-  -H "Authorization: Bearer <YOUR_JWT>"
-````
+    ```bash
+    curl "http://localhost:8080/api/sync-products?mode=full&shop_id=1" \
+      -H "Authorization: Bearer <YOUR_JWT>"
+    ```
 
     Use `mode=incremental` for later syncs. Poll the sync status endpoint while the job runs.
 
-````bash
-curl "http://localhost:8080/api/sync-products/status?shop_id=1" \
-  -H "Authorization: Bearer <YOUR_JWT>"
-````
+    ```bash
+    curl "http://localhost:8080/api/sync-products/status?shop_id=1" \
+      -H "Authorization: Bearer <YOUR_JWT>"
+    ```
 
     Continue when the status response shows that the product sync has completed.
   </Step>
 
-  <Step title="Set a Redemption URL" icon="link-2">
+  <Step title="Set a Redemption URL" icon="link-2" title-type="p">
     Assign the redemption destination to a synced product.
 
-````bash
-curl -X POST http://localhost:8080/api/products/1/redeem_url \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <YOUR_JWT>" \
-  -d '{"redeem_url": "https://example.com/redeem"}'
-````
+    ```bash
+    curl -X POST http://localhost:8080/api/products/1/redeem_url \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer <YOUR_JWT>" \
+      -d '{"redeem_url": "https://example.com/redeem"}'
+    ```
 
     A successful response confirms that product ID `1` has a redemption URL.
   </Step>
 
-  <Step title="Test the Buyer Flow" icon="check-circle">
+  <Step title="Test the Buyer Flow" icon="check-circle" title-type="p">
     Submit a Shopee order ID to the redemption endpoint.
 
-````bash
-curl -X POST http://localhost:8080/api/redemption \
-  -H "Content-Type: application/json" \
-  -d '{"order_id": "240101ABCDEF123"}'
-````
+    ```bash
+    curl -X POST http://localhost:8080/api/redemption \
+      -H "Content-Type: application/json" \
+      -d '{"order_id": "240101ABCDEF123"}'
+    ```
 
     The response contains a `response` array with redemption entries and a `warnings` array. An empty warnings array indicates that the test completed without reported issues.
   </Step>
 </Steps>
 
-<Callout kind="success">
-
-The platform is running. Explore the admin dashboard at [http://localhost:5173](http://localhost:5173) and the public portal at [http://localhost:5174](http://localhost:5174).
-
+<Callout kind="success" collapsed="false">
+  The platform is running. Explore the admin dashboard at [http://localhost:5173](http://localhost:5173) and the public portal at [http://localhost:5174](http://localhost:5174).
 </Callout>
 
 ## Next steps
 
 Use these guides to configure the deployment and operate the platform beyond the first redemption.
 
-<Columns cols={2}>
-  <Card title="Architecture" href="/architecture" horizontal>
+<Columns cols="2">
+  <Card title="Architecture" href="/architecture" horizontal="false">
     Understand the system design and how the services work together.
   </Card>
 
-  <Card title="Configuration" href="/configuration" horizontal>
+  <Card title="Configuration" href="/configuration" horizontal="false">
     Review the full environment variable reference.
   </Card>
 
-  <Card title="Seller & Shop Management" href="/seller-shop-management" horizontal>
+  <Card title="Seller & Shop Management" href="/seller-shop-management" horizontal="false">
     Manage sellers, Shopee shops, and authorization settings.
   </Card>
 
-  <Card title="Product Sync" href="/product-sync" horizontal>
+  <Card title="Product Sync" href="/product-sync" horizontal="false">
     Configure and monitor product synchronization in detail.
   </Card>
 </Columns>
+
