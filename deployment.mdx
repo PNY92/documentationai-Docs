@@ -1,0 +1,111 @@
+---
+title: "Deployment"
+description: "Deploy the full platform with Docker Compose — services, ports, volumes, profiles, and production considerations."
+---
+
+## Services Overview
+
+The platform ships with a `docker-compose.yaml` file that orchestrates all services. Redis, PostgreSQL, the backend, and the worker start by default. The `migrate` and `inventory-mcp` profiles are optional.
+
+Docker Compose defines the following services:
+
+| Service | Container port | Host port | Description |
+|---|---:|---:|---|
+| `redis` | `6379` | `6379` | Message queue for BullMQ jobs |
+| `db` | `5432` | `5435` | PostgreSQL 17 database |
+| `backend` | `8080` | `8080` | Bun and Express API server |
+| `worker` | Not applicable | Not applicable | Background token refresh and product sync, enabled through `TOKEN_REFRESH_WORKER=true` |
+| `migrate` | Not applicable | Not applicable | Optional database migration service, enabled through the `migrate` profile |
+| `inventory-mcp` | `8081` | `8081` | Optional MCP HTTP server, enabled through the `inventory-mcp` profile |
+
+## Starting the stack
+
+Start the default services from the repository root:
+
+<Steps>
+<Step title="Start the default services">
+
+```bash
+docker-compose up -d
+```
+
+Docker Compose starts Redis, PostgreSQL, the backend, and the worker services defined in the default configuration.
+
+</Step>
+
+<Step title="Verify the services">
+
+```bash
+docker-compose ps
+```
+
+Confirm that the containers show a running state before connecting the frontends or sending API requests.
+
+</Step>
+</Steps>
+
+## Enabling the worker
+
+The worker service starts only when `TOKEN_REFRESH_WORKER` is set to `true` in `backend/.env`. Without this setting, token refresh and product synchronization jobs remain unprocessed.
+
+<Callout kind="alert">
+
+If `TOKEN_REFRESH_WORKER` is not set to `true`, Shopee access tokens will expire and product syncs will not run. Always enable the worker in production.
+
+</Callout>
+
+## Running migrations
+
+The database schema is initialized from `database/init.sql`. Additional schema changes are stored in `database/migrations`. Run the optional `migrate` profile to apply those migrations:
+
+```bash
+docker-compose --profile migrate up -d migrate
+```
+
+Check the migration container logs if you need to confirm that the migration command completed successfully:
+
+```bash
+docker-compose logs migrate
+```
+
+## Starting the MCP server
+
+The MCP server is optional and runs through a separate profile. Configure `inventory-mcp/.env` before starting the service.
+
+```bash
+docker-compose --profile inventory-mcp up -d inventory-mcp
+```
+
+<Callout kind="info">
+
+The MCP server listens on port `8081` and requires `MCP_HTTP_KEY` for HTTP authentication. It supports stdio transport for local use and authenticated Streamable HTTP at `/mcp` for remote access.
+
+</Callout>
+
+## Volumes and persistence
+
+Docker Compose creates named volumes for PostgreSQL and Redis data. These volumes persist across container restarts. The database data volume stores product, seller, shop, and redemption URL data.
+
+| Volume | Service | Purpose |
+|---|---|---|
+| Compose-managed volume | `db` | PostgreSQL data |
+| Compose-managed volume | `redis` | Redis persistence, when enabled by the Compose configuration |
+
+Removing containers does not remove named volumes. Back up the PostgreSQL volume before deleting or recreating persistent infrastructure.
+
+## Production considerations
+
+- Use the production Shopee environment hostname instead of the sandbox URL.
+- Set `ALLOWED_CORS_HOSTNAMES` to your production frontend domains.
+- Set `PUBLIC_REDEMPTION_PORTAL_HOSTNAME` to your public portal URL.
+- Generate strong secrets of at least 32 characters for `JWT_SECRET_KEY` and `JWT_REFRESH_SECRET_KEY`.
+- Set `TOKEN_REFRESH_WORKER=true` to enable the background worker.
+- Configure `VITE_BACKEND_API_HOSTNAME` for both the admin and public frontends.
+- Use a reverse proxy such as nginx for TLS termination on ports `8080`, `5173`, and `5174`.
+- Back up the PostgreSQL volume regularly.
+
+<Callout kind="tip">
+
+See [Configuration](/configuration) for the full environment reference, or follow the [Quickstart](/quickstart) for a step-by-step deployment walkthrough.
+
+</Callout>

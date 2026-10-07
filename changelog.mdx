@@ -1,59 +1,52 @@
 ---
 title: Changelog
-description: Version history with 2-3 recent updates, bug fixes, and new features.
+description: 'Version history with 2-3 recent updates, bug fixes, and new features.'
 ---
-
 ## Recent Updates
 
 Stay updated with the latest improvements to Wally And Cody. Check your current version in the dashboard settings and upgrade via the CLI for the newest features.
 
-<Callout kind="info">
+<Callout kind="info" collapsed="false">
   To check your version, run `wally version` in your terminal. Upgrades include auto-redeem enhancements and better Shopee integration.
 </Callout>
 
-<Update label="2024-10-15" description="v1.2.0" tags={["feature", "improvement"]}>
+<Update label="2024-10-15" description="v1.2.0" tags={["feature","improvement"]}>
+  ## New Features
 
-## New Features
+  - Instant redeem links now support bulk order IDs for faster processing.
+  - Added dashboard analytics to track successful redemptions over time.
 
-- Instant redeem links now support bulk order IDs for faster processing.
-- Added dashboard analytics to track successful redemptions over time.
+  ## Improvements
 
-## Improvements
+  - Reduced processing time by `>30%` for high-volume orders.
+  - Enhanced error handling for invalid Shopee order formats.
 
-- Reduced processing time by `>30%` for high-volume orders.
-- Enhanced error handling for invalid Shopee order formats.
+  ## Bug Fixes
 
-## Bug Fixes
-
-- Fixed occasional failures on orders with special characters in IDs.
-- Resolved mobile responsiveness issues in the redeem interface.
-
+  - Fixed occasional failures on orders with special characters in IDs.
+  - Resolved mobile responsiveness issues in the redeem interface.
 </Update>
 
-<Update label="2024-09-20" description="v1.1.0" tags={["bugfix", "security"]}>
+<Update label="2024-09-20" description="v1.1.0" tags={["bugfix","security"]}>
+  ## Bug Fixes
 
-## Bug Fixes
+  - Patched vulnerability in order ID validation to prevent injection attempts.
+  - Corrected sync issues between auto-redeem system and Shopee API.
 
-- Patched vulnerability in order ID validation to prevent injection attempts.
-- Corrected sync issues between auto-redeem system and Shopee API.
+  ## Improvements
 
-## Improvements
-
-- Optimized pop-up interface for quicker `Get redeem link` actions.
-
+  - Optimized pop-up interface for quicker `Get redeem link` actions.
 </Update>
 
-<Update label="2024-08-10" description="v1.0.0" tags={["feature", "breaking"]}>
+<Update label="2024-08-10" description="v1.0.0" tags={["feature","breaking"]}>
+  ## New Features
 
-## New Features
+  - Core auto-redeem system: Enter Shopee order ID and get links instantly.
+  - Instant delivery notifications for all successful redemptions.
 
-- Core auto-redeem system: Enter Shopee order ID and get links instantly.
-- Instant delivery notifications for all successful redemptions.
+  ## Breaking Changes
 
-## Breaking Changes
-
-- Updated API endpoints from `/v0/redeem` to `/v1/redeem`. Update your integrations.
-
+  - Updated API endpoints from `/v0/redeem` to `/v1/redeem`. Update your integrations.
 </Update>
 
 ## Upgrade Process
@@ -61,39 +54,36 @@ Stay updated with the latest improvements to Wally And Cody. Check your current 
 Follow these steps to upgrade to the latest version.
 
 <Steps>
-  <Step title="Check Current Version" icon="info">
+  <Step title="Check Current Version" icon="info" title-type="p">
+    Run the version check command.
 
-Run the version check command.
-
-````bash
-wally version
-````
-
+    ```bash
+    wally version
+    ```
   </Step>
-  <Step title="Update CLI" icon="download">
 
-Install the latest release.
+  <Step title="Update CLI" icon="download" title-type="p">
+    Install the latest release.
 
-<CodeGroup tabs="npm,yarn">
-````bash
-npm install -g wally-and-cody@latest
-````
-````bash
-yarn global add wally-and-cody@latest
-````
-</CodeGroup>
+    <CodeGroup show-lines="true">
+      ```bash
+      npm install -g wally-and-cody@latest
+      ```
 
+      ```bash
+      yarn global add wally-and-cody@latest
+      ```
+    </CodeGroup>
   </Step>
-  <Step title="Verify Update" icon="check-circle">
 
-Confirm the new version.
+  <Step title="Verify Update" icon="check-circle" title-type="p">
+    Confirm the new version.
 
-````bash
-wally version
-````
+    ```bash
+    wally version
+    ```
 
-Expect output like `v1.2.0`.
-
+    Expect output like `v1.2.0`.
   </Step>
 </Steps>
 
@@ -101,28 +91,33 @@ Expect output like `v1.2.0`.
 
 Track our roadmap for Wally And Cody enhancements.
 
-<Board title="Roadmap">
-  <BoardColumn title="Planned" color="0" icon="calendar">
-    <BoardCard title="Multi-platform support" description="Extend to Lazada and Tokopedia order IDs" icon="globe" dueDate="2024-11-15" />
-    <BoardCard title="Webhook integrations" description="Real-time notifications to Discord/Slack" icon="zap" />
+<Board uid="a793a201-360c-4b74-96f9-79bae1db8f59" title="Roadmap">
+  <BoardColumn title="Planned" uid="4a27d71e-01f3-4605-a7cd-f0169bb0a662" color="0" icon="calendar">
+    <BoardCard title="Multi-platform support" uid="0fb13ab0-c542-4d6a-9369-ac8043fd343e" description="Extend to Lazada and Tokopedia order IDs" icon="globe" due-date="2024-11-15" />
+
+    <BoardCard title="Webhook integrations" uid="bfd5cb58-a787-4d3b-b1c5-39e42ee50deb" description="Real-time notifications to Discord/Slack" icon="zap" />
   </BoardColumn>
-  <BoardColumn title="In Progress" color="1" icon="loader-2">
-    <BoardCard title="AI order validation" description="Smart detection of redeemable vouchers" icon="brain" author="Dev Team" />
+
+  <BoardColumn title="In Progress" uid="b0aa34e9-eb32-49f4-80ff-9092258f8a64" color="1" icon="loader-2">
+    <BoardCard title="AI order validation" uid="4683fff1-cc46-4de9-9d55-12f3984ce2f3" description="Smart detection of redeemable vouchers" icon="brain" author="Dev Team" />
   </BoardColumn>
-  <BoardColumn title="Backlog" color="2" icon="package">
-    <BoardCard title="Enterprise dashboard" description="Team accounts and usage limits" createdAt="2024-10-01" />
+
+  <BoardColumn title="Backlog" uid="4f85048b-ad0e-4c48-b4e3-f04dc8624465" color="2" icon="package">
+    <BoardCard title="Enterprise dashboard" uid="c02edc3a-ebb5-4e94-a605-b60fdc845617" description="Team accounts and usage limits" created-at="2024-10-01" />
   </BoardColumn>
 </Board>
 
-<Columns cols={2}>
-  <Card title="Report Issues" icon="bug" href="https://github.com/wallyandcody/issues" horizontal>
+<Columns cols="2">
+  <Card title="Report Issues" href="https://github.com/wallyandcody/issues" icon="bug" horizontal="false">
     Found a bug? Submit it on GitHub.
   </Card>
-  <Card title="Request Features" icon="sparkle" href="https://github.com/wallyandcody/discussions" horizontal>
+
+  <Card title="Request Features" href="https://github.com/wallyandcody/discussions" icon="sparkle" horizontal="false">
     Suggest new ideas in discussions.
   </Card>
 </Columns>
 
-<Callout kind="tip">
+<Callout kind="tip" collapsed="false">
   This changelog focuses on user-facing changes. View full commit history on GitHub for technical details.
 </Callout>
+

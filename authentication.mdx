@@ -1,0 +1,123 @@
+---
+title: "Authentication"
+description: "Authenticate API requests with JWT access and refresh tokens, understand ADMIN and SELLER roles, and configure token lifetimes."
+---
+
+## Authentication overview
+
+The platform uses JWT-based authentication. All admin and seller API requests require a valid access token in the `Authorization` header. Tokens are issued at login and refreshed through a dedicated refresh endpoint.
+
+## Login
+
+Authenticate by sending credentials to `POST /api/login`. The response includes an access token and a refresh token.
+
+<CodeGroup tabs="cURL,JavaScript">
+
+```bash
+curl -X POST http://localhost:8080/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@acme.test",
+    "password": "S3cureExamplePassword!42"
+  }'
+```
+
+```javascript
+const response = await fetch("http://localhost:8080/api/login", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    email: "admin@acme.test",
+    password: "S3cureExamplePassword!42"
+  })
+});
+
+const tokens = await response.json();
+console.log(tokens);
+```
+
+</CodeGroup>
+
+A successful login returns both tokens:
+
+<Response>
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.access.token",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.refresh.token"
+}
+```
+
+</Response>
+
+Store the refresh token securely. Use the access token for normal API requests, and use the refresh token only with the refresh endpoint.
+
+## Refresh token
+
+Access tokens expire after the configured lifetime, which defaults to 15 minutes. Use the refresh token to obtain a new access token without re-entering credentials.
+
+```bash
+curl -X POST http://localhost:8080/api/refresh \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.refresh.token"
+```
+
+The refresh endpoint validates the refresh token and returns a new access token. Refresh tokens expire after the configured refresh lifetime, which defaults to 7 days.
+
+## Using the access token
+
+Include the access token in the `Authorization` header for all protected endpoints.
+
+```bash
+curl http://localhost:8080/api/products \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.access.token"
+```
+
+The backend uses the token claims to authenticate the request and enforce the caller's role and shop scope. Public endpoints such as `POST /api/login` do not require an access token.
+
+## Roles
+
+The platform supports two roles that control access to endpoints.
+
+| Role | Access |
+|---|---|
+| `ADMIN` | Full access: create, update, and delete sellers and shops; manage all products; configure redemption URLs; trigger synchronizations and boosting |
+| `SELLER` | Shop-scoped access: manage products for assigned shops; configure redemption URLs; trigger synchronizations; view token health |
+
+<Callout kind="info">
+
+`SELLER` accounts are scoped to specific shops. The backend enforces shop ownership on all product, synchronization, and token operations.
+
+</Callout>
+
+## Token configuration
+
+Configure token lifetimes and signing secrets through environment variables in `backend/.env`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `JWT_SECRET_KEY` | Required | Signing key for access tokens. Must be at least 32 characters. |
+| `JWT_EXPIRES_IN` | `15m` | Access token lifetime. |
+| `JWT_REFRESH_SECRET_KEY` | Required | Signing key for refresh tokens. Must be at least 32 characters. |
+| `JWT_REFRESH_EXPIRES_IN` | `7d` | Refresh token lifetime. |
+| `JWT_ISSUER` | `shopee-autoredeemer` | Token issuer claim. |
+| `JWT_AUDIENCE` | `shopee-autoredeemer-admin` | Token audience claim. |
+
+<Callout kind="alert">
+
+Never reuse the same secret for `JWT_SECRET_KEY` and `JWT_REFRESH_SECRET_KEY`. Generate separate, random strings of at least 32 characters for each.
+
+</Callout>
+
+## Shopee OAuth
+
+Shop-level authorization with the Shopee Open Platform is separate from JWT authentication. After creating a shop with Shopee credentials, the seller authorizes the shop through a Shopee OAuth flow:
+
+1. Call `GET /api/token/auth-url?shop_id=1` to get the authorization URL.
+2. Visit the URL in a browser and approve access in Shopee.
+3. Shopee redirects to `/api/shopee/token/callback`, which stores the access and refresh tokens.
+4. The background worker refreshes the Shopee token automatically before expiry.
+
+For the complete shop setup process, see [seller shop management](/seller-shop-management). For all authentication and environment variables, see [configuration](/configuration).

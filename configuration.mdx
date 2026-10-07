@@ -1,0 +1,164 @@
+---
+title: Configuration
+description: Complete environment variable reference for the backend, admin dashboard, public portal, inventory agent, and MCP server.
+---
+
+## Configuration
+
+Each service in the platform reads its configuration from environment variables. Copy the corresponding `.env.example` file to `.env` and fill in the values before starting the stack.
+
+<Callout kind="info">
+
+All `.env.example` files are in their respective service directories: `root .env.example`, `backend/.env.example`, `frontend/admin/.env.example`, `frontend/public/.env.example`, `inventory-agent/.env.example`, and `inventory-mcp/.env.example`.
+
+</Callout>
+
+## Backend
+
+The backend configuration is loaded from `backend/.env` and parsed by the config module. Variables are grouped by function.
+
+### Authentication
+
+| Variable | Default | Description |
+|---|---|---|
+| `JWT_SECRET_KEY` | Required | Access token signing key. Minimum 32 characters. |
+| `JWT_EXPIRES_IN` | `15m` | Access token lifetime. |
+| `JWT_REFRESH_SECRET_KEY` | Required | Refresh token signing key. Minimum 32 characters. |
+| `JWT_REFRESH_EXPIRES_IN` | `7d` | Refresh token lifetime. |
+| `JWT_ISSUER` | `shopee-autoredeemer` | JWT issuer claim. |
+| `JWT_AUDIENCE` | `shopee-autoredeemer-admin` | JWT audience claim. |
+
+### Server and CORS
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT_NUMBER` | `8080` | Backend listen port. |
+| `ALLOWED_CORS_HOSTNAMES` | Required | Comma-separated list of allowed CORS origins. |
+| `PUBLIC_REDEMPTION_PORTAL_HOSTNAME` | Required | Public portal URL used to construct `/r/:directory_key` links. |
+
+### PostgreSQL
+
+| Variable | Default | Description |
+|---|---|---|
+| `PG_HOST` | `db` | PostgreSQL host. |
+| `PG_PORT` | `5432` | PostgreSQL port. |
+| `PG_DATABASE` | `shopeedb` | Database name. |
+| `PG_USER` | Required | Database user. |
+| `PG_PASSWORD` | Required | Database password. |
+
+### Redis
+
+| Variable | Default | Description |
+|---|---|---|
+| `REDIS_HOST` | `redis` | Redis host. |
+| `REDIS_PORT` | `6379` | Redis port. |
+| `REDIS_PASSWORD` | Empty | Redis password, if required. |
+
+### Shopee
+
+| Variable | Default | Description |
+|---|---|---|
+| `SHOPEE_ENVIRONMENT_HOSTNAME` | `https://openplatform.sandbox.test-stable.shopee.sg/` | Shopee API base URL. Use the production URL for live shops. |
+| `SHOPEE_REDIRECT_URI` | `http://localhost:8080/api/shopee/token/callback` | OAuth callback URL. |
+
+<Callout kind="info">
+
+Per-shop Shopee credentials, including the partner ID, partner key, and shop ID, are stored in the `shops` table, not in environment variables.
+
+</Callout>
+
+### Worker
+
+| Variable | Default | Description |
+|---|---|---|
+| `TOKEN_REFRESH_WORKER` | `false` | Set to `true` to enable the token refresh and product sync worker. |
+| `TOKEN_REFRESH_WORKER_CONCURRENCY` | `3` | Number of concurrent BullMQ jobs the worker processes. |
+
+## Admin Dashboard
+
+Configure the admin dashboard in `frontend/admin/.env`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_BACKEND_API_HOSTNAME` | `http://localhost:8080` | Backend API URL. |
+| `VITE_ANALYTICS_PROVIDER` | `none` | Analytics provider. Set to `rybbit` to enable analytics. |
+| `VITE_RYBBIT_SITE_ID` | Empty | Rybbit site ID. |
+| `VITE_RYBBIT_SCRIPT_URL` | `https://app.rybbit.io/api/script.js` | Rybbit script URL. |
+
+## Public Portal
+
+Configure the public portal in `frontend/public/.env`. The public portal uses the same variables as the admin dashboard.
+
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_BACKEND_API_HOSTNAME` | `http://localhost:8080` | Backend API URL. |
+| `VITE_ANALYTICS_PROVIDER` | `none` | Analytics provider. |
+| `VITE_RYBBIT_SITE_ID` | Empty | Rybbit site ID. |
+| `VITE_RYBBIT_SCRIPT_URL` | `https://app.rybbit.io/api/script.js` | Rybbit script URL. |
+
+## Inventory Agent
+
+Configure the inventory agent in `inventory-agent/.env`. The agent authenticates as a shop-scoped seller account.
+
+### Backend connection
+
+| Variable | Description |
+|---|---|
+| `BACKEND_URL` | Backend API URL. |
+| `BACKEND_EMAIL` | Seller account email, not an administrator account. |
+| `BACKEND_PASSWORD` | Seller account password. |
+
+### Google Drive
+
+| Variable | Description |
+|---|---|
+| `SOURCE_PROVIDER` | Set to `google-drive`. |
+| `GOOGLE_AUTH_MODE` | Authentication mode: `service-account` or `oauth`. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to the service account JSON file when using service-account mode. |
+| `GOOGLE_CLIENT_ID` | OAuth client ID when using OAuth mode. |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret. |
+| `GOOGLE_REFRESH_TOKEN` | OAuth refresh token. |
+| `DRIVE_ROOT_IDS` | Comma-separated Google Drive folder IDs to index. |
+| `DRIVE_SHARED_DRIVE_ID` | Shared drive ID, if applicable. |
+
+### Optional AI matching
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENROUTER_API_KEY` | Empty | API key for OpenRouter LLM matching. |
+| `OPENROUTER_MODEL` | Empty | Model name for semantic matching. |
+| `LLM_MATCHING` | `false` | Enable LLM-based matching. |
+| `MATCH_MODE` | `auto` | Matching mode: `auto` or `manual`. |
+| `AGENT_MAX_STEPS` | `20` | Maximum steps for the conversation agent. |
+| `LLM_MAX_REQUESTS` | `50` | Maximum LLM API requests per run. |
+
+### Scheduling and state
+
+| Variable | Default | Description |
+|---|---|---|
+| `SCHEDULE_INTERVAL_SECONDS` | `3600` | Run interval in seconds. The default is one hour. |
+| `STATE_PATH` | `./state/agent.sqlite` | Path to the SQLite state file. |
+| `BATCH_SIZE` | `200` | Batch size for backend submissions. |
+| `PAGE_SIZE` | `500` | Page size for Drive API pagination. |
+| `SOURCE_CONCURRENCY` | `4` | Number of concurrent Drive API requests. |
+
+## MCP Server
+
+Configure the MCP server in `inventory-mcp/.env`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `BACKEND_API_URL` | `http://127.0.0.1:8080/api` | Backend API URL. |
+| `BACKEND_EMAIL` | Required | Seller account email. |
+| `BACKEND_PASSWORD` | Required | Seller account password. |
+| `MCP_HTTP_KEY` | Required | Long random secret used for HTTP authentication. |
+| `MCP_HOST` | `127.0.0.1` | HTTP listen host. |
+| `MCP_PORT` | `8081` | HTTP listen port. |
+| `MCP_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Allowed hostnames. |
+| `MCP_ALLOWED_ORIGINS` | Empty | Allowed CORS origins. |
+
+<Callout kind="tip">
+
+For Docker Compose deployment details, see [Deployment](/deployment). For JWT token settings and authentication flows, see [Authentication](/authentication).
+
+</Callout>

@@ -1,123 +1,92 @@
 ---
 title: Features
-description: Detailed walkthrough of core capabilities and real-world use cases for the auto redeem system.
+description: Explore the platform's core capabilities — automated product sync, multi-level redemption URLs, token management, boosting, inventory agent matching, and MCP integration.
 ---
 
-## Core Features
+## Automate product redemption from sync to delivery
 
-Wally And Cody delivers essential DevOps capabilities tailored for Shopee order redeem automation. You get instant access to redeem links without manual intervention.
+The platform provides a complete toolkit for Shopee sellers to automate product redemption. From automatic token refresh to multi-URL redemption directories, every capability is designed to reduce manual work and speed up delivery to buyers.
 
 <Columns cols={2}>
-  <Card title="Instant Delivery" icon="zap" href="/features/instant-delivery">
-    Receive redeem links in seconds after entering your Shopee order ID.
+  <Card title="Automated Product Sync" icon="refresh-cw" href="/product-sync">
+    Pull products, variants, prices, and stock from Shopee into PostgreSQL with incremental or full sync modes.
   </Card>
-  <Card title="Auto Redeem System" icon="settings" href="/features/auto-redeem">
-    Automated processing handles validation and link generation seamlessly.
+  <Card title="Multi-Level Redemption URLs" icon="link" href="/redemption-urls">
+    Configure URLs at the product or model level, with support for multiple labeled links per model.
   </Card>
-  <Card title="One-Tap Interface" icon="mouse-pointer" href="/features/interface">
-    Simple input field and button for effortless redeem link retrieval.
+  <Card title="Token Auto-Refresh" icon="key" href="/token-refresh">
+    A background worker refreshes Shopee access tokens automatically before they expire.
   </Card>
-  <Card title="Shopee Order Support" icon="package" href="/features/supported-orders">
-    Compatible with vouchers, coins, and promotional orders from Shopee.
+  <Card title="Product Boosting" icon="trending-up" href="/product-boosting">
+    Enable products for boosting and run round-robin campaigns through the Shopee API.
+  </Card>
+  <Card title="Public Redemption Portal" icon="shopping-bag" href="/buyer-redemption">
+    Buyers enter a Shopee order ID and receive matching redemption links instantly.
+  </Card>
+  <Card title="Inventory Agent" icon="bot" href="/inventory-agent">
+    Automatically match Google Drive files to products that lack redemption URLs.
+  </Card>
+  <Card title="MCP Server" icon="code" href="/mcp-server">
+    Access platform capabilities programmatically through Model Context Protocol automation tools.
+  </Card>
+  <Card title="Role-Based Access" icon="shield" href="/authentication">
+    Protect platform access with JWT authentication and ADMIN or SELLER roles.
   </Card>
 </Columns>
 
-## Instant Delivery Mechanism
+## Automated product synchronization
 
-The instant delivery feature processes your Shopee order ID immediately upon submission. You enter the ID, and the system fetches the redeem link without delays.
+Product sync pulls item data from the Shopee Open Platform into PostgreSQL. The backend submits a BullMQ job to Redis, and the background worker fetches and upserts products, models, prices, stock, and raw metadata. Sync runs in two modes:
 
-<Steps>
-  <Step title="Enter Order ID" icon="hash">
-    Input your Shopee order ID from the app or website.
-  </Step>
-  <Step title="Validate Order" icon="check-circle">
-    System checks order status and eligibility automatically.
-  </Step>
-  <Step title="Generate Link" icon="link">
-    Retrieve and display the redeem link instantly.
-  </Step>
-</Steps>
+| Mode | Description |
+|---|---|
+| Full | Fetches and upserts all products from the shop. Use for initial sync. |
+| Incremental | Fetches only changed products since the last sync. Use for routine updates. |
 
-<Callout kind="success">
-  Delivery typically completes in `<1s`, ensuring a smooth user experience.
+## Multi-level redemption URLs
+
+Redemption URLs can be configured at two levels. Product-level URLs apply to the entire product. Model-level URLs apply to specific variants and support multiple labeled, ordered, active or inactive links. When a model has multiple active URLs, the backend generates a public redemption directory at `/r/:directory_key`.
+
+URL resolution follows this priority:
+
+1. Multiple active model links: public redemption directory.
+2. Single active model link: that direct URL.
+3. No model link: product-level URL.
+4. No URL configured: `CONTACT_SELLER_REQUIRED` warning.
+
+## Token auto-refresh
+
+Shopee access tokens expire periodically. The background worker runs a scan every five minutes to find shops with expiring tokens and enqueues refresh jobs. This keeps shops authorized without manual intervention.
+
+<Callout kind="info">
+
+Token refresh is handled by the `scan-due-shops` job type. Worker concurrency is controlled by `TOKEN_REFRESH_WORKER_CONCURRENCY`.
+
 </Callout>
 
-## Auto Redeem System Explained
+## Product boosting
 
-The auto redeem system integrates with Shopee APIs to handle the entire flow programmatically. You can embed it in your DevOps pipelines for bulk processing.
+Sellers can mark products for boosting and trigger round-robin campaigns. The backend calls the Shopee boost API for selected products, cycling through them to maximize visibility.
+
+## Buyer redemption flow
+
+The public portal is the buyer-facing entry point. Buyers submit a Shopee order ID, and the backend validates the order through Shopee, checks the order status against an allowlist, aggregates duplicate lines, resolves redemption URLs, and returns the results.
 
 ```mermaid
 sequenceDiagram
-    User->>WallyAndCody: Submit Order ID
-    WallyAndCody->>ShopeeAPI: Validate Order
-    ShopeeAPI->>WallyAndCody: Order Data
-    WallyAndCody->>User: Redeem Link
+    Buyer->>Portal: Enter order ID
+    Portal->>Backend: POST /api/redemption
+    Backend->>Shopee: Validate order
+    Shopee->>Backend: Order details
+    Backend->>Database: Resolve products and URLs
+    Backend->>Portal: Response and warnings
+    Portal->>Buyer: Display redemption links
 ```
 
-For API integration, use the following endpoint:
-
-<Request tabs="cURL,JavaScript">
-  ```bash
-  curl -X POST https://api.example.com/v1/redeem \
-    -H "Authorization: Bearer YOUR_API_KEY" \
-    -H "Content-Type: application/json" \
-    -d '{"orderId": "1234567890"}'
-  ```
-  ```javascript
-  const response = await fetch('https://api.example.com/v1/redeem', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer YOUR_API_KEY',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ orderId: '1234567890' })
-  });
-  const data = await response.json();
-  ```
-</Request>
-
-<Response tabs="200">
-  ```json
-  {
-    "success": true,
-    "redeemLink": "https://shopee.com/redeem/abc123",
-    "orderId": "1234567890"
-  }
-  ```
-</Response>
-
-## Simple One-Tap Interface
-
-Access the one-tap interface via web or mobile. It requires only your order ID—no accounts or extra steps.
-
-<Tabs>
-  <Tab title="Web" icon="globe">
-    Visit `https://dashboard.example.com/redeem` and paste your order ID.
-  </Tab>
-  <Tab title="Mobile" icon="smartphone">
-    Use the app: scan QR or enter ID directly for instant results.
-  </Tab>
-</Tabs>
-
-## Supported Shopee Order Types
-
-Wally And Cody supports various Shopee order formats. Review compatibility below:
-
-| Order Type     | Description                          | Supported |
-|----------------|--------------------------------------|-----------|
-| Voucher        | Promotional vouchers                 | Yes      |
-| Shopee Coins   | Coin redemptions                     | Yes      |
-| Product Deals  | Flash sale rewards                   | Yes      |
-| Standard Promo | General promotional codes            | Yes      |
-
-<Expandable title="Advanced Configuration" default-open="false">
-  Customize support via environment variables in your DevOps setup:
-
-  ```bash
-  export SHOPEE_ORDER_TYPES="voucher,coins,deals"
-  ```
-</Expandable>
+Allowed order statuses: `READY_TO_SHIP`, `PROCESSED`, `RETRY_SHIP`, `SHIPPED`, `TO_CONFIRM_RECEIVE`, `COMPLETED`.
 
 <Callout kind="tip">
-  Test with sample order IDs like `1234567890` in sandbox mode first.
+
+Start with the [quickstart](/quickstart), then review the [API reference](/api-reference) for endpoint details.
+
 </Callout>

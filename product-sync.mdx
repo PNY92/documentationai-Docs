@@ -1,0 +1,130 @@
+---
+title: "Product Synchronization"
+description: "Run incremental and full product syncs from Shopee, poll job status, and understand what data gets imported into PostgreSQL."
+---
+
+## How sync works
+
+Product synchronization imports shop data from the Shopee Open Platform into PostgreSQL. The backend submits a BullMQ job to Redis, and the background worker fetches and upserts products, models, prices, stock, and raw metadata. Sync runs in two modes: full and incremental.
+
+When a sync is triggered, the backend submits a job to the Redis and BullMQ queue. The worker claims the job and calls Shopee's product API to fetch item data. Products and their models, also called variants, are upserted into the database with their current prices, stock, and Shopee metadata.
+
+```mermaid
+graph LR
+    Seller -->|GET /api/sync-products| Backend
+    Backend -->|Submit BullMQ job| Redis[(Redis)]
+    Worker -->|Claim job| Redis
+    Worker -->|Fetch products| Shopee[Shopee API]
+    Shopee -->|Product data| Worker
+    Worker -->|Upsert| DB[(PostgreSQL)]
+    Seller -->|GET /api/sync-products/status| Backend
+```
+
+<Callout kind="info">
+
+The worker uses a per-shop job ID for product sync. If a sync job is already queued or running for a shop, the request is reused instead of creating a duplicate.
+
+</Callout>
+
+## Sync modes
+
+| Mode | Use case | Behavior |
+|---|---|---|
+| `full` | Initial sync or complete refresh | Fetches all products from the shop |
+| `incremental` | Routine updates | Fetches only products changed since the last sync |
+
+## Triggering a sync
+
+Trigger a sync by calling the sync endpoint with the shop ID and mode:
+
+```bash
+curl "http://localhost:8080/api/sync-products?mode=full&shop_id=1" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.sync-token"
+```
+
+The endpoint validates the mode, submits a job to Redis, and returns the sync job information. The background worker performs the Shopee API requests and database updates asynchronously.
+
+<Callout kind="tip">
+
+Use `mode=full` for the first sync after connecting a shop. Use `mode=incremental` for routine updates to reduce API calls and sync time.
+
+</Callout>
+
+## Polling sync status
+
+Check the status of a running or completed sync job:
+
+```bash
+curl "http://localhost:8080/api/sync-products/status?shop_id=1" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.sync-token"
+```
+
+The response indicates whether the sync is pending, running, or completed. Poll this endpoint from the admin interface or an operational script until the worker finishes processing the job.
+
+## What gets synced
+
+The sync imports the following data into PostgreSQL:
+
+- **Product items:** Shopee item ID, name, shop ownership, stock data, and boost state
+- **Product models:** Variant or model ID, SKU, prices, stock, status, and raw Shopee data
+- **Prices and stock:** Current values for each model
+- **Raw Shopee metadata:** Source data retained for reference and downstream processing
+
+## Database tables
+
+Synced data is stored in two primary tables:
+
+| Table | Description |
+|---|---|
+| `products` | Product-level data: Shopee item ID, name, shop ID, product-level redemption URL, stock, and boost state |
+| `product_models` | Variant-level data: model ID, SKU, prices, stock, status, raw Shopee data, and optional redemption URL |
+
+<Callout kind="info">
+
+Product models also support multiple labeled redemption URLs through the `product_model_redemption_urls` table. See [Redemption URLs](/redemption-urls) for details.
+
+</Callout>
+
+## Troubleshooting sync
+
+Common sync issues are grouped below by the symptom you see.
+
+<ExpandableGroup>
+
+<Expandable title="Sync job stays in pending">
+
+Check the worker and queue infrastructure:
+
+- Confirm that `TOKEN_REFRESH_WORKER=true` is configured.
+- Check Redis connectivity.
+- Run `docker-compose ps` and verify that the worker container is running.
+
+</Expandable>
+
+<Expandable title="Sync returns no products">
+
+Verify the shop configuration and sync mode:
+
+- Confirm that the shop is authorized with `GET /api/token/health`.
+- Check that the Shopee shop ID is correct.
+- Try a full sync instead of an incremental sync.
+
+</Expandable>
+
+<Expandable title="Sync fails with a token error">
+
+Refresh the shop token and verify the stored credentials:
+
+- Refresh the Shopee token with `GET /api/shops/:id/token/refresh`.
+- Verify the Shopee partner credentials stored in the `shops` table.
+- Confirm that the seller account has access to the shop.
+
+</Expandable>
+
+</ExpandableGroup>
+
+<Callout kind="tip">
+
+After synchronization completes, configure product and model redemption links in [Redemption URLs](/redemption-urls). If the shop has not completed Shopee authorization, follow [Seller shop management](/seller-shop-management).
+
+</Callout>

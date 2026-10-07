@@ -1,115 +1,191 @@
 ---
-title: Quickstart
-description: Guide users through generating their first redeem link in under a minute using a Shopee order ID.
+title: "Quick Start"
+description: "Deploy the platform with Docker Compose, connect your first Shopee shop, sync products, and test a buyer redemption in under 30 minutes."
 ---
 
-## Get Started in Under a Minute
+## Run the platform locally
 
-Follow this quickstart to generate your first redeem link from a Shopee order ID. Wally And Cody provides instant delivery through its auto-redeem system. You only need a valid Shopee order ID to get started—no accounts or signups required.
+Get the entire Shopee Auto Redeemer v2 platform running locally with Docker Compose. You will clone the repository, configure environment files, start the services, create your first seller, connect a Shopee shop, sync products, and verify the buyer redemption flow.
 
 <Callout kind="info">
 
 **Prerequisites:**
 
-- A recent Shopee order ID (format: `YYMMDD` followed by letters/numbers, e.g., `231015ABC123`)
-- Access to a web browser (Chrome, Firefox, Safari, or Edge)
-- Stable internet connection
+- Docker and Docker Compose installed
+- A Shopee Open Platform partner account with a partner ID and partner key
+- Git installed and available in your terminal
 
 </Callout>
 
-## Step-by-Step Guide
-
-Use these steps to generate and use your redeem link. The entire process takes less than 60 seconds.
-
 <Steps>
-  <Step title="Visit Wally And Cody" icon="globe">
-    Open your web browser and navigate to [https://wallyandcody.com](https://wallyandcody.com).
+  <Step title="Clone the Repository" icon="git-branch">
+    Clone the platform repository and move into its root directory.
 
-    You will see the simple interface with an "Order ID" input field and a "Get redeem link" button.
-  </Step>
-
-  <Step title="Enter Your Shopee Order ID" icon="hash">
-    Locate the "Order ID" field.
-
-    Paste or type your Shopee order ID. For example:
-
-````plaintext
-231015ABC123
+````bash
+git clone https://github.com/Wally-And-Cody/Shopee_AutoRedeemer_v2.git
+cd Shopee_AutoRedeemer_v2
 ````
 
-    Order IDs are typically 9-12 characters starting with the order date (`YYMMDD`).
-
+    Your terminal is now positioned in the repository root, where the Docker Compose configuration is located.
   </Step>
 
-  <Step title="Generate the Redeem Link" icon="zap">
-    Click the "Get redeem link" button.
+  <Step title="Configure Environment Files" icon="settings">
+    Each service provides an `.env.example` file. Copy each template to the corresponding `.env` file before starting the stack.
 
-    Wally And Cody processes the order ID instantly using its auto-redeem system. Within seconds, a redeem link appears.
+````bash
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/admin/.env.example frontend/admin/.env
+cp frontend/public/.env.example frontend/public/.env
+````
 
-    Copy the generated link to your clipboard.
+    Set the following critical variables. Keep secrets out of version control.
+
+    - **Root `.env`**: `POSTGRES_USER`, `POSTGRES_PASSWORD`
+    - **`backend/.env`**: `JWT_SECRET_KEY` with at least 32 characters, `JWT_REFRESH_SECRET_KEY` with at least 32 characters, `PG_PASSWORD`, `SHOPEE_ENVIRONMENT_HOSTNAME`, `SHOPEE_REDIRECT_URI`, `ALLOWED_CORS_HOSTNAMES`, `PUBLIC_REDEMPTION_PORTAL_HOSTNAME`
+    - **`frontend/admin/.env`**: `VITE_BACKEND_API_HOSTNAME=http://localhost:8080`
+    - **`frontend/public/.env`**: `VITE_BACKEND_API_HOSTNAME=http://localhost:8080`
+
+    Confirm that every service has a populated `.env` file before continuing.
   </Step>
 
-  <Step title="Redeem Your Item" icon="link">
-    Paste the redeem link into your browser or the relevant app/store.
+  <Step title="Start the Stack" icon="play">
+    Start the services in detached mode.
 
-    Follow the redemption prompts to claim your item. Check your email or Shopee account for confirmation.
+````bash
+docker-compose up -d
+````
+
+    Docker Compose starts Redis on port `6379`, PostgreSQL on port `5435`, the backend on port `8080`, and the worker. The worker starts automatically when `TOKEN_REFRESH_WORKER=true` is set in `backend/.env`.
+
+    Check the running containers with `docker-compose ps`. Each required service should report a running or healthy status.
+  </Step>
+
+  <Step title="Create Your First Seller" icon="user-plus">
+    Use the sellers endpoint to create an administrator account, then log in to obtain a JWT.
+
+````bash
+# Create an admin seller
+curl -X POST http://localhost:8080/api/sellers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "securepassword",
+    "name": "Admin User",
+    "role": "ADMIN"
+  }'
+
+# Login to get a JWT
+curl -X POST http://localhost:8080/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "securepassword"
+  }'
+````
+
+    Save the JWT from the login response. Use it in the `Authorization` header for the remaining seller and shop requests.
+  </Step>
+
+  <Step title="Create a Shop" icon="store">
+    Register the Shopee shop against the seller account. Replace the partner credentials and shop ID with values from your Shopee Open Platform account.
+
+````bash
+curl -X POST http://localhost:8080/api/shops \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT>" \
+  -d '{
+    "seller_id": 1,
+    "shopee_partner_id": "123456",
+    "shopee_partner_key": "your-partner-key",
+    "shopee_shop_id": "67890"
+  }'
+````
+
+    A successful response confirms that the shop is associated with seller ID `1`.
+  </Step>
+
+  <Step title="Authorize with Shopee" icon="link">
+    Request the Shopee authorization URL for the shop.
+
+````bash
+curl "http://localhost:8080/api/token/auth-url?shop_id=1" \
+  -H "Authorization: Bearer <YOUR_JWT>"
+````
+
+    Open the returned authorization URL in a browser and approve access in Shopee. Shopee redirects to the configured callback URL, where the platform stores the shop's access and refresh tokens.
+
+    After the redirect completes, the shop is authorized for product and order operations.
+  </Step>
+
+  <Step title="Sync Products" icon="refresh-cw">
+    Run the initial product sync in full mode. Use the JWT from the login response.
+
+````bash
+curl "http://localhost:8080/api/sync-products?mode=full&shop_id=1" \
+  -H "Authorization: Bearer <YOUR_JWT>"
+````
+
+    Use `mode=incremental` for later syncs. Poll the sync status endpoint while the job runs.
+
+````bash
+curl "http://localhost:8080/api/sync-products/status?shop_id=1" \
+  -H "Authorization: Bearer <YOUR_JWT>"
+````
+
+    Continue when the status response shows that the product sync has completed.
+  </Step>
+
+  <Step title="Set a Redemption URL" icon="link-2">
+    Assign the redemption destination to a synced product.
+
+````bash
+curl -X POST http://localhost:8080/api/products/1/redeem_url \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT>" \
+  -d '{"redeem_url": "https://example.com/redeem"}'
+````
+
+    A successful response confirms that product ID `1` has a redemption URL.
+  </Step>
+
+  <Step title="Test the Buyer Flow" icon="check-circle">
+    Submit a Shopee order ID to the redemption endpoint.
+
+````bash
+curl -X POST http://localhost:8080/api/redemption \
+  -H "Content-Type: application/json" \
+  -d '{"order_id": "240101ABCDEF123"}'
+````
+
+    The response contains a `response` array with redemption entries and a `warnings` array. An empty warnings array indicates that the test completed without reported issues.
   </Step>
 </Steps>
 
-## Verify the Redemption Process
+<Callout kind="success">
 
-After generating the link, verify success across different devices.
+The platform is running. Explore the admin dashboard at [http://localhost:5173](http://localhost:5173) and the public portal at [http://localhost:5174](http://localhost:5174).
 
-<Tabs>
-  <Tab title="Desktop Browser" icon="monitor">
-    Open the redeem link in a new tab. Log in to the partner platform if prompted. Confirm the item appears in your account.
-  </Tab>
-
-  <Tab title="Mobile App" icon="smartphone">
-    Paste the link into your mobile browser or app store. Tap through the redemption flow. Check order history for updates.
-  </Tab>
-
-  <Tab title="Shopee App" icon="shopping-bag">
-    Return to Shopee app > Orders > Track your order. Redeemed items show as "Claimed" or "Delivered".
-  </Tab>
-</Tabs>
-
-<Callout kind="tip">
-  If the link expires or fails, regenerate using the same order ID. Links are valid for a limited time.
 </Callout>
 
-## Common Troubleshooting
+## Next steps
 
-<Expandable title="What if my order ID is invalid?" default-open="true">
-  Ensure the order ID matches exactly from your Shopee confirmation email or app (case-sensitive). Test with a recent order.
-</Expandable>
-
-<Expandable title="Link not working?">
-  Clear browser cache, try incognito mode, or switch devices. Contact support via the website footer if issues persist.
-</Expandable>
-
-## Next Steps
-
-Explore more features to streamline your redemptions.
+Use these guides to configure the deployment and operate the platform beyond the first redemption.
 
 <Columns cols={2}>
-  <Card title="Advanced Usage" icon="settings" href="/guides">
-    Learn batch processing and automation tips.
+  <Card title="Architecture" href="/architecture" horizontal>
+    Understand the system design and how the services work together.
   </Card>
 
-  <Card title="Troubleshooting" icon="help-circle" href="/faq">
-    Resolve common order ID and link issues.
+  <Card title="Configuration" href="/configuration" horizontal>
+    Review the full environment variable reference.
   </Card>
 
-  <Card title="API Access" icon="code" href="/api-reference" horizontal>
-    Integrate programmatically for high-volume redemptions.
+  <Card title="Seller & Shop Management" href="/seller-shop-management" horizontal>
+    Manage sellers, Shopee shops, and authorization settings.
   </Card>
 
-  <Card title="Support" icon="life-buoy" href="https://wallyandcody.com/support" horizontal target="_blank">
-    Get help from the team.
+  <Card title="Product Sync" href="/product-sync" horizontal>
+    Configure and monitor product synchronization in detail.
   </Card>
 </Columns>
-
-<Callout kind="success">
-  Congratulations! You've generated your first redeem link. Customize this starter documentation to fit your needs.
-</Callout>

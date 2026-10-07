@@ -1,0 +1,140 @@
+---
+title: Seller & Shop Management
+description: Create sellers with ADMIN or SELLER roles, register Shopee shops, authorize via OAuth, and monitor token health.
+---
+
+## Seller and shop management
+
+Sellers are the platform's user accounts. Each seller can have one or more shops linked to the Shopee Open Platform. Administrators create sellers and shops, then sellers authorize their shops through Shopee OAuth.
+
+## Creating a seller
+
+Administrators create seller accounts with an `ADMIN` or `SELLER` role. Send a `POST` request to `/api/sellers` with the required fields.
+
+```bash
+curl -X POST http://localhost:8080/api/sellers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.admin.token" \
+  -d '{
+    "email": "seller@acme.test",
+    "password": "securepassword",
+    "name": "Shop Seller",
+    "role": "SELLER"
+  }'
+```
+
+A successful request creates the seller account and makes it available for shop assignment.
+
+<Callout kind="info">
+
+`ADMIN` accounts have full access to all sellers, shops, and products. `SELLER` accounts are scoped to the shops assigned to them.
+
+</Callout>
+
+## Managing sellers
+
+Administrators can list, update, and delete sellers. All seller endpoints require an `ADMIN` JWT.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/sellers` | List all sellers |
+| `POST` | `/api/sellers` | Create a seller |
+| `PUT` | `/api/sellers/:id` | Update seller details |
+| `DELETE` | `/api/sellers/:id` | Delete a seller |
+
+## Creating a shop
+
+A shop connects a seller to a Shopee Open Platform account. Create the shop with the seller ID and the Shopee partner credentials assigned to the integration.
+
+```bash
+curl -X POST http://localhost:8080/api/shops \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.admin.token" \
+  -d '{
+    "seller_id": 1,
+    "shopee_partner_id": "123456",
+    "shopee_partner_key": "partner_key_example_8xk2m9q4",
+    "shopee_shop_id": "67890"
+  }'
+```
+
+The shop is created without Shopee access tokens. Authorize the shop through the OAuth flow before synchronizing products or using Shopee operations.
+
+## Managing shops
+
+Shop endpoints allow administrators to list, create, update, and delete shops.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/shops` | List all shops |
+| `GET` | `/api/shops/:id` | Get a specific shop |
+| `POST` | `/api/shops` | Create a shop |
+| `PUT` | `/api/shops/:id` | Update shop details |
+| `DELETE` | `/api/shops/:id` | Delete a shop |
+
+## Authorizing a shop with Shopee
+
+After creating a shop, authorize it with Shopee to obtain access and refresh tokens.
+
+<Steps>
+<Step title="Get authorization URL" icon="link">
+
+Request an authorization URL for the shop.
+
+```bash
+curl "http://localhost:8080/api/token/auth-url?shop_id=1" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.seller.token"
+```
+
+The response contains a Shopee authorization URL. Copy the URL before continuing.
+
+</Step>
+
+<Step title="Approve in Shopee" icon="check-circle">
+
+Open the authorization URL in a browser. Log in to Shopee and approve the platform's access request for the shop.
+
+Shopee redirects you to the configured callback after approval.
+
+</Step>
+
+<Step title="Store the tokens" icon="save">
+
+Shopee redirects to `/api/shopee/token/callback`. The backend exchanges the authorization code for access and refresh tokens, then stores the tokens and their expiry information in the `shops` table.
+
+</Step>
+
+<Step title="Verify token health" icon="activity">
+
+Check the shop's current token status and expiry information.
+
+```bash
+curl "http://localhost:8080/api/token/health?shop_id=1" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.seller.token"
+```
+
+A successful response shows the current token health information for the shop. Confirm that the token is valid before starting a product synchronization.
+
+</Step>
+</Steps>
+
+## Managing Shopee tokens
+
+The platform manages the Shopee token lifecycle automatically when the token refresh worker is enabled. Administrators and sellers can also refresh a shop's tokens manually.
+
+```bash
+curl "http://localhost:8080/api/shops/1/token/refresh" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.seller.token"
+```
+
+<Callout kind="info">
+
+The background worker scans for expiring tokens every five minutes and refreshes them automatically. Use manual refresh when the worker is not running or when you need an immediate refresh.
+
+</Callout>
+
+<Callout kind="tip">
+
+Review [JWT authentication](/authentication) for login and token requirements. After authorization succeeds, continue with [product synchronization](/product-sync) to import products and variants from Shopee.
+
+</Callout>
