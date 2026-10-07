@@ -1,146 +1,922 @@
 openapi: '3.0.0'
 info:
-  version: 1.0.0
-  title: Wally And Cody
+  title: Shopee Auto Redeemer API
+  version: 2.0.0
+  description: |
+    API for authenticating users, managing Shopee shops and products, synchronizing
+    catalog data, configuring redemption URLs, and running product boosting operations.
+
+    Protected endpoints require a JWT access token in the `Authorization` header:
+    `Bearer <token>`.
+  contact:
+    name: Shopee Auto Redeemer Support
+    email: support@shopeeautoredeemer.local
   license:
     name: MIT
+    url: https://opensource.org/licenses/MIT
 servers:
-  - url: https://api.wallyandcody.com/v1
+  - url: http://localhost:8080
+tags:
+  - name: Authentication
+    description: Login and access-token management.
+  - name: Redemption
+    description: Public order redemption and model-directory operations.
+  - name: Sellers
+    description: Administrative seller management.
+  - name: Shops
+    description: Administrative Shopee shop management.
+  - name: Shopee Tokens
+    description: Shopee OAuth and token health operations.
+  - name: Product Sync
+    description: Product catalog synchronization operations.
+  - name: Products
+    description: Product and model redemption URL management.
+  - name: Redemption Targets
+    description: Identification and batch assignment of missing redemption URLs.
+  - name: Boosting
+    description: Product boosting selection and execution.
 paths:
-  /documents:
-    get:
-      summary: List documents
-      description: Retrieves a paginated list of documentation entries for DevOps teams. Use the limit parameter to control page size.
-      operationId: listDocuments
-      parameters:
-        - name: limit
-          in: query
-          description: How many items to return at one time (max 100)
-          required: false
-          schema:
-            type: integer
-            format: int32
-      responses:
-        200:
-          description: An paged array of documents
-          headers:
-            x-next:
-              description: A link to the next page of responses
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Documents'
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+  /api/login:
     post:
-      summary: Create document
-      operationId: createDocuments
+      tags:
+        - Authentication
+      summary: Authenticate a user
+      description: Authenticates a user and returns access and refresh JWT tokens.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
       responses:
-        201:
-          description: Null response
-        default:
-          description: unexpected error
+        '200':
+          description: Authentication succeeded.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-  /documents/{documentId}:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh an access token
+      description: Exchanges a valid refresh bearer token for a new access token.
+      operationId: refreshAccessToken
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Access token refreshed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/redemption:
+    post:
+      tags:
+        - Redemption
+      summary: Look up an order for redemption
+      description: Looks up an order and returns the redemption URLs associated with its items and models. This public endpoint is rate limited to 20 requests per minute per IP address.
+      operationId: redeemOrder
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedemptionRequest'
+      responses:
+        '200':
+          description: Redemption URLs and warnings returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedemptionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/redemption/directories/{directory_key}:
     get:
-      summary: Get document
-      description: Retrieves detailed information about a specific documentation entry by its unique identifier. Use this to inspect runbooks, guides, and deployment notes.
-      operationId: showDocumentById
+      tags:
+        - Redemption
+      summary: Resolve a model directory
+      description: Resolves a multi-link model directory into an ordered list of redemption URLs.
+      operationId: resolveRedemptionDirectory
+      security: []
       parameters:
-        - name: documentId
-          in: path
+        - $ref: '#/components/parameters/DirectoryKey'
+      responses:
+        '200':
+          description: Directory URLs returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/sellers:
+    get:
+      tags:
+        - Sellers
+      summary: List sellers
+      description: Returns all sellers. Requires an administrator JWT.
+      operationId: listSellers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sellers returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Seller'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Sellers
+      summary: Create a seller
+      description: Creates a seller account. Requires an administrator JWT.
+      operationId: createSeller
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SellerCreateRequest'
+      responses:
+        '201':
+          description: Seller created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Seller'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/sellers/{id}:
+    put:
+      tags:
+        - Sellers
+      summary: Update a seller
+      description: Updates a seller account. Requires an administrator JWT.
+      operationId: updateSeller
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SellerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SellerUpdateRequest'
+      responses:
+        '200':
+          description: Seller updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Seller'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Sellers
+      summary: Delete a seller
+      description: Deletes a seller account. Requires an administrator JWT.
+      operationId: deleteSeller
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SellerId'
+      responses:
+        '204':
+          description: Seller deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/shops:
+    get:
+      tags:
+        - Shops
+      summary: List shops
+      description: Returns all configured Shopee shops. Requires an administrator JWT.
+      operationId: listShops
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Shops returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shop'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Shops
+      summary: Create a shop
+      description: Creates a Shopee shop configuration. Requires an administrator JWT.
+      operationId: createShop
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopCreateRequest'
+      responses:
+        '201':
+          description: Shop created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/shops/{id}:
+    get:
+      tags:
+        - Shops
+      summary: Get a shop
+      description: Returns one Shopee shop. Requires an administrator JWT.
+      operationId: getShop
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopId'
+      responses:
+        '200':
+          description: Shop returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Shops
+      summary: Update a shop
+      description: Updates a Shopee shop configuration. Requires an administrator JWT.
+      operationId: updateShop
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopUpdateRequest'
+      responses:
+        '200':
+          description: Shop updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Shops
+      summary: Delete a shop
+      description: Deletes a Shopee shop configuration. Requires an administrator JWT.
+      operationId: deleteShop
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopId'
+      responses:
+        '204':
+          description: Shop deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/shops/{id}/token/create:
+    post:
+      tags:
+        - Shopee Tokens
+      summary: Create Shopee authorization
+      description: Starts Shopee authorization for a shop and returns its OAuth authorization URL.
+      operationId: createShopToken
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopId'
+      responses:
+        '200':
+          description: Authorization URL returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUrlResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/shops/{id}/token/refresh:
+    get:
+      tags:
+        - Shopee Tokens
+      summary: Refresh a Shopee token
+      description: Refreshes the Shopee token associated with a shop.
+      operationId: refreshShopToken
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopId'
+      responses:
+        '200':
+          description: Shopee token refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefreshResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/token/health:
+    get:
+      tags:
+        - Shopee Tokens
+      summary: Check token health
+      description: Returns the token health for a shop accessible to the authenticated user.
+      operationId: getTokenHealth
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopIdQuery'
+      responses:
+        '200':
+          description: Token health returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenHealth'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/token/auth-url:
+    get:
+      tags:
+        - Shopee Tokens
+      summary: Get a Shopee authorization URL
+      description: Returns the Shopee OAuth authorization URL for a shop accessible to the authenticated user.
+      operationId: getTokenAuthUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopIdQuery'
+      responses:
+        '200':
+          description: Authorization URL returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUrlResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/shopee/token/callback:
+    get:
+      tags:
+        - Shopee Tokens
+      summary: Handle Shopee OAuth callback
+      description: Processes the Shopee OAuth callback and redirects the user after token authorization.
+      operationId: handleShopeeTokenCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
           required: true
-          description: The id of the document to retrieve
+          description: Authorization code returned by Shopee.
           schema:
             type: string
-      responses:
-        200:
-          description: Expected response to a valid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Documents'
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /deployments:
-    get:
-      summary: List deployments
-      description: Retrieves a paginated list of deployment records used in DevOps documentation. Use the limit parameter to control page size.
-      operationId: listDeployments
-      parameters:
-        - name: limit
+        - name: shop_id
           in: query
-          description: How many items to return at one time (max 100)
-          required: false
+          required: true
+          description: Identifier of the shop being authorized.
           schema:
             type: integer
-            format: int32
+            format: int64
       responses:
-        200:
-          description: An paged array of deployments
+        '302':
+          description: Redirect after OAuth processing.
           headers:
-            x-next:
-              description: A link to the next page of responses
+            Location:
+              description: Redirect destination.
               schema:
                 type: string
+                format: uri
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/sync-products:
+    get:
+      tags:
+        - Product Sync
+      summary: Trigger product synchronization
+      description: Starts a full or incremental product synchronization for a shop.
+      operationId: triggerProductSync
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopIdQuery'
+        - name: mode
+          in: query
+          required: true
+          description: Synchronization mode.
+          schema:
+            type: string
+            enum:
+              - full
+              - incremental
+      responses:
+        '200':
+          description: Synchronization job started.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Deployments'
-        default:
-          description: unexpected error
+                $ref: '#/components/schemas/SyncJobResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/sync-products/status:
+    get:
+      tags:
+        - Product Sync
+      summary: Get product synchronization status
+      description: Returns the current product synchronization status for a shop.
+      operationId: getProductSyncStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopIdQuery'
+      responses:
+        '200':
+          description: Synchronization status returned.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/SyncStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/products:
+    get:
+      tags:
+        - Products
+      summary: List products
+      description: Returns products for a shop accessible to the authenticated user.
+      operationId: listProducts
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopIdQuery'
+      responses:
+        '200':
+          description: Products returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+        - Products
+      summary: Create a product
+      description: Creates a product for a shop.
+      operationId: createProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateRequest'
+      responses:
+        '201':
+          description: Product created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/products/{product_id}:
+    get:
+      tags:
+        - Products
+      summary: Get a product
+      description: Returns one product by its identifier.
+      operationId: getProduct
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Product returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/products/{product_id}/redeem_url:
+    post:
+      tags:
+        - Products
+      summary: Set a product redemption URL
+      description: Sets the product-level redemption URL.
+      operationId: setProductRedemptionUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedemptionUrlRequest'
+      responses:
+        '200':
+          description: Product redemption URL updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/products/{product_id}/models/{model_id}/redeem_url:
+    post:
+      tags:
+        - Products
+      summary: Set a model redemption URL
+      description: Sets the redemption URL for a specific product model.
+      operationId: setModelRedemptionUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/ModelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedemptionUrlRequest'
+      responses:
+        '200':
+          description: Model redemption URL updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/products/{product_id}/models/{model_id}/redemption_urls:
+    put:
+      tags:
+        - Products
+      summary: Replace model redemption URLs
+      description: Replaces the complete ordered URL list for a product model.
+      operationId: replaceModelRedemptionUrls
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/ModelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRedemptionUrlsRequest'
+      responses:
+        '200':
+          description: Model redemption URLs replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/products/redemption-targets:
+    get:
+      tags:
+        - Redemption Targets
+      summary: List missing redemption targets
+      description: Returns products and models that do not have redemption URLs.
+      operationId: listRedemptionTargets
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ShopIdQuery'
+      responses:
+        '200':
+          description: Redemption targets returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RedemptionTarget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/products/redemption-targets/batch:
+    post:
+      tags:
+        - Redemption Targets
+      summary: Apply batch redemption assignments
+      description: Applies safe batch assignments and reports assignments that were skipped.
+      operationId: applyRedemptionTargetBatch
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchAssignmentRequest'
+      responses:
+        '200':
+          description: Batch assignments processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchAssignmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/products/boost-selection:
+    put:
+      tags:
+        - Boosting
+      summary: Update product boost selection
+      description: Enables or disables boosting for a set of products.
+      operationId: updateBoostSelection
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BoostSelectionRequest'
+      responses:
+        '200':
+          description: Boost selection updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/products/boost/run:
+    post:
+      tags:
+        - Boosting
+      summary: Run product boosting
+      description: Runs round-robin boosting for the selected products.
+      operationId: runProductBoosting
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Boosting run completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoostRunResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token, or refresh token for the token refresh endpoint.
+  parameters:
+    DirectoryKey:
+      name: directory_key
+      in: path
+      required: true
+      description: Key of the multi-link model directory.
+      schema:
+        type: string
+    SellerId:
+      name: id
+      in: path
+      required: true
+      description: Seller identifier.
+      schema:
+        type: integer
+        format: int64
+    ShopId:
+      name: id
+      in: path
+      required: true
+      description: Shop identifier.
+      schema:
+        type: integer
+        format: int64
+    ShopIdQuery:
+      name: shop_id
+      in: query
+      required: true
+      description: Shop identifier.
+      schema:
+        type: integer
+        format: int64
+    ProductId:
+      name: product_id
+      in: path
+      required: true
+      description: Product identifier.
+      schema:
+        type: integer
+        format: int64
+    ModelId:
+      name: model_id
+      in: path
+      required: true
+      description: Shopee model identifier.
+      schema:
+        type: integer
+        format: int64
+  responses:
+    BadRequest:
+      description: The request is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Authentication is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: The authenticated user is not allowed to perform this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: The request conflicts with an existing resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: The request rate limit was exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
-    Document:
-      required:
-        - id
-        - name
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        tag:
-          type: string
-    Documents:
-      type: array
-      items:
-        $ref: '#/components/schemas/Document'
-    Deployment:
-      required:
-        - id
-        - name
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        tag:
-          type: string
-    Deployments:
-      type: array
-      items:
-        $ref: '#/components/schemas/Deployment'
     Error:
+      type: object
+      description: Standard error response.
       required:
         - code
         - message
@@ -148,5 +924,570 @@ components:
         code:
           type: integer
           format: int32
+          description: Application-specific error code.
         message:
           type: string
+          description: Human-readable error message.
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address.
+        password:
+          type: string
+          format: password
+          description: User password.
+    LoginResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+      properties:
+        access_token:
+          type: string
+          description: JWT access token.
+        refresh_token:
+          type: string
+          description: JWT refresh token.
+    AccessTokenResponse:
+      type: object
+      required:
+        - access_token
+      properties:
+        access_token:
+          type: string
+          description: New JWT access token.
+    RedemptionRequest:
+      type: object
+      required:
+        - order_id
+      properties:
+        order_id:
+          type: string
+          description: Shopee order identifier.
+    RedemptionResponse:
+      type: object
+      required:
+        - response
+        - warnings
+      properties:
+        response:
+          type: array
+          description: Redemption entries found for the order.
+          items:
+            $ref: '#/components/schemas/RedemptionEntry'
+        warnings:
+          type: array
+          description: Non-fatal warnings generated during lookup.
+          items:
+            $ref: '#/components/schemas/Warning'
+    RedemptionEntry:
+      type: object
+      required:
+        - shopee_item_id
+        - item_name
+        - shopee_model_id
+        - model_name
+        - quantity
+        - redeem_url
+      properties:
+        shopee_item_id:
+          type: integer
+          format: int64
+          description: Shopee item identifier.
+        item_name:
+          type: string
+          description: Item name.
+        shopee_model_id:
+          type: integer
+          format: int64
+          description: Shopee model identifier.
+        model_name:
+          type: string
+          description: Model name.
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Quantity ordered.
+        redeem_url:
+          type: string
+          format: uri
+          description: Redemption URL.
+    Warning:
+      type: object
+      required:
+        - type
+        - message
+      properties:
+        type:
+          type: string
+          description: Warning category.
+        message:
+          type: string
+          description: Warning message.
+    DirectoryResponse:
+      type: object
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/DirectoryUrl'
+    DirectoryUrl:
+      type: object
+      required:
+        - label
+        - url
+        - sort_order
+      properties:
+        label:
+          type: string
+          description: Display label for the URL.
+        url:
+          type: string
+          format: uri
+          description: Redemption URL.
+        sort_order:
+          type: integer
+          format: int32
+          description: Ordering position.
+    Seller:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - role
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Seller identifier.
+        email:
+          type: string
+          format: email
+          description: Seller email address.
+        name:
+          type: string
+          description: Seller display name.
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - SELLER
+          description: Seller role.
+    SellerCreateRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          description: Seller email address.
+        password:
+          type: string
+          format: password
+          description: Initial seller password.
+        name:
+          type: string
+          description: Seller display name.
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - SELLER
+          description: Seller role.
+    SellerUpdateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Updated seller email address.
+        password:
+          type: string
+          format: password
+          description: Updated seller password.
+        name:
+          type: string
+          description: Updated seller display name.
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - SELLER
+          description: Updated seller role.
+    Shop:
+      type: object
+      required:
+        - id
+        - seller_id
+        - shopee_partner_id
+        - shopee_shop_id
+        - has_token
+        - token_expires_at
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Shop identifier.
+        seller_id:
+          type: integer
+          format: int64
+          description: Owning seller identifier.
+        shopee_partner_id:
+          type: string
+          description: Shopee partner identifier.
+        shopee_shop_id:
+          type: string
+          description: Shopee shop identifier.
+        has_token:
+          type: boolean
+          description: Whether the shop has an authorized Shopee token.
+        token_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Token expiration timestamp.
+    ShopCreateRequest:
+      type: object
+      required:
+        - seller_id
+        - shopee_partner_id
+        - shopee_partner_key
+        - shopee_shop_id
+      properties:
+        seller_id:
+          type: integer
+          format: int64
+          description: Owning seller identifier.
+        shopee_partner_id:
+          type: string
+          description: Shopee partner identifier.
+        shopee_partner_key:
+          type: string
+          description: Shopee partner key.
+        shopee_shop_id:
+          type: string
+          description: Shopee shop identifier.
+    ShopUpdateRequest:
+      type: object
+      properties:
+        seller_id:
+          type: integer
+          format: int64
+          description: Owning seller identifier.
+        shopee_partner_id:
+          type: string
+          description: Shopee partner identifier.
+        shopee_partner_key:
+          type: string
+          description: Shopee partner key.
+        shopee_shop_id:
+          type: string
+          description: Shopee shop identifier.
+    AuthUrlResponse:
+      type: object
+      required:
+        - auth_url
+      properties:
+        auth_url:
+          type: string
+          format: uri
+          description: Shopee OAuth authorization URL.
+    TokenRefreshResponse:
+      type: object
+      required:
+        - success
+        - expires_at
+      properties:
+        success:
+          type: boolean
+          description: Whether token refresh succeeded.
+        expires_at:
+          type: string
+          format: date-time
+          description: New token expiration timestamp.
+    TokenHealth:
+      type: object
+      required:
+        - shop_id
+        - has_token
+        - expires_at
+        - is_expired
+      properties:
+        shop_id:
+          type: integer
+          format: int64
+          description: Shop identifier.
+        has_token:
+          type: boolean
+          description: Whether a token exists.
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Token expiration timestamp.
+        is_expired:
+          type: boolean
+          description: Whether the token is expired.
+    SyncJobResponse:
+      type: object
+      required:
+        - job_id
+        - status
+      properties:
+        job_id:
+          type: string
+          description: Synchronization job identifier.
+        status:
+          type: string
+          description: Initial synchronization status.
+    SyncStatusResponse:
+      type: object
+      required:
+        - status
+        - last_sync_at
+      properties:
+        status:
+          type: string
+          enum:
+            - pending
+            - running
+            - completed
+            - failed
+          description: Current synchronization status.
+        last_sync_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of the most recent completed synchronization.
+    Product:
+      type: object
+      required:
+        - id
+        - shopee_item_id
+        - name
+        - shop_id
+        - redeem_url
+        - boost_enabled
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Product identifier.
+        shopee_item_id:
+          type: integer
+          format: int64
+          description: Shopee item identifier.
+        name:
+          type: string
+          description: Product name.
+        shop_id:
+          type: integer
+          format: int64
+          description: Shop identifier.
+        redeem_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Product-level redemption URL.
+        boost_enabled:
+          type: boolean
+          description: Whether boosting is enabled.
+    ProductCreateRequest:
+      type: object
+      required:
+        - shopee_item_id
+        - name
+        - shop_id
+      properties:
+        shopee_item_id:
+          type: integer
+          format: int64
+          description: Shopee item identifier.
+        name:
+          type: string
+          description: Product name.
+        shop_id:
+          type: integer
+          format: int64
+          description: Shop identifier.
+    RedemptionUrlRequest:
+      type: object
+      required:
+        - redeem_url
+      properties:
+        redeem_url:
+          type: string
+          format: uri
+          description: Redemption URL to assign.
+    ModelRedemptionUrlsRequest:
+      type: object
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelRedemptionUrl'
+    ModelRedemptionUrl:
+      type: object
+      required:
+        - label
+        - url
+        - sort_order
+        - active
+      properties:
+        label:
+          type: string
+          description: Display label for the URL.
+        url:
+          type: string
+          format: uri
+          description: Redemption URL.
+        sort_order:
+          type: integer
+          format: int32
+          description: Ordering position.
+        active:
+          type: boolean
+          description: Whether the URL is active.
+    RedemptionTarget:
+      type: object
+      required:
+        - product_id
+        - product_name
+        - model_id
+        - model_name
+        - sku
+      properties:
+        product_id:
+          type: integer
+          format: int64
+          description: Product identifier.
+        product_name:
+          type: string
+          description: Product name.
+        model_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Model identifier.
+        model_name:
+          type: string
+          nullable: true
+          description: Model name.
+        sku:
+          type: string
+          nullable: true
+          description: Stock keeping unit.
+    BatchAssignmentRequest:
+      type: object
+      required:
+        - assignments
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedemptionAssignment'
+    RedemptionAssignment:
+      type: object
+      required:
+        - product_id
+        - model_id
+        - redeem_url
+      properties:
+        product_id:
+          type: integer
+          format: int64
+          description: Product identifier.
+        model_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Model identifier, when assigning a model URL.
+        redeem_url:
+          type: string
+          format: uri
+          description: Redemption URL to assign.
+    BatchAssignmentResponse:
+      type: object
+      required:
+        - applied
+        - skipped
+      properties:
+        applied:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Number of assignments applied.
+        skipped:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkippedAssignment'
+    SkippedAssignment:
+      type: object
+      required:
+        - product_id
+        - reason
+      properties:
+        product_id:
+          type: integer
+          format: int64
+          description: Product identifier for the skipped assignment.
+        reason:
+          type: string
+          description: Reason the assignment was skipped.
+    BoostSelectionRequest:
+      type: object
+      required:
+        - product_ids
+        - enabled
+      properties:
+        product_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: Products whose boost selection should be changed.
+        enabled:
+          type: boolean
+          description: Whether boosting should be enabled.
+    BoostRunResponse:
+      type: object
+      required:
+        - boosted
+        - failed
+      properties:
+        boosted:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: Product identifiers boosted successfully.
+        failed:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: Product identifiers that failed to boost.
+    SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation succeeded.

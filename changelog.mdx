@@ -1,123 +1,97 @@
 ---
 title: Changelog
-description: 'Version history with 2-3 recent updates, bug fixes, and new features.'
+description: >-
+  Track platform evolution — from core auto-redeem system through product model
+  support, multi-URL redemption, boosting, inventory agent, and MCP server.
 ---
-## Recent Updates
+## Release history
 
-Stay updated with the latest improvements to Wally And Cody. Check your current version in the dashboard settings and upgrade via the CLI for the newest features.
+The Shopee Auto Redeemer platform has evolved through several major milestones. Each release expanded the system from a basic order-to-link lookup into a full-stack automation platform with Google Drive matching and MCP integration.
 
-<Callout kind="info" collapsed="false">
-  To check your version, run `wally version` in your terminal. Upgrades include auto-redeem enhancements and better Shopee integration.
-</Callout>
-
-<Update label="2024-10-15" description="v1.2.0" tags={["feature","improvement"]}>
+<Update label="2024-12-01" description="v2.4.0" tags={["feature"]}>
   ## New Features
 
-  - Instant redeem links now support bulk order IDs for faster processing.
-  - Added dashboard analytics to track successful redemptions over time.
+  - Added MCP Server with stdio and authenticated HTTP transport.
+  - Exposed 9 MCP tools: `list_products`, `get_product`, `list_redemption_targets`, `set_product_redemption_link`, `set_variant_redemption_links`, `assign_missing_redemption_links`, `sync_products`, `get_sync_status`, and `get_token_health`.
+  - Added host allowlisting and origin allowlisting for MCP HTTP transport.
 
   ## Improvements
 
-  - Reduced processing time by `>30%` for high-volume orders.
-  - Enhanced error handling for invalid Shopee order formats.
-
-  ## Bug Fixes
-
-  - Fixed occasional failures on orders with special characters in IDs.
-  - Resolved mobile responsiveness issues in the redeem interface.
+  - Scoped the MCP server to one seller or shop for safety. Seller administration, boosting, and stock changes are not exposed.
 </Update>
 
-<Update label="2024-09-20" description="v1.1.0" tags={["bugfix","security"]}>
-  ## Bug Fixes
+<Update label="2024-10-15" description="v2.3.0" tags={["feature"]}>
+  ## New Features
 
-  - Patched vulnerability in order ID validation to prevent injection attempts.
-  - Corrected sync issues between auto-redeem system and Shopee API.
+  - Added Inventory Agent with Google Drive integration.
+  - Implemented matching priority for approved matches, exact SKU, exact name, and optional OpenRouter semantic matching.
+  - Added SQLite state persistence for the Inventory Agent.
+  - Added a batch redemption target assignment endpoint with fingerprint safety checks.
 
   ## Improvements
 
-  - Optimized pop-up interface for quicker `Get redeem link` actions.
+  - Inventory Agent preserves existing URLs and only fills missing ones.
+  - Uncertain matches remain available for manual review.
 </Update>
 
-<Update label="2024-08-10" description="v1.0.0" tags={["feature","breaking"]}>
+<Update label="2024-08-20" description="v2.2.0" tags={["feature"]}>
   ## New Features
 
-  - Core auto-redeem system: Enter Shopee order ID and get links instantly.
-  - Instant delivery notifications for all successful redemptions.
+  - Added product boosting with round-robin campaign support.
+  - Added a boost-selection toggle endpoint for enabling or disabling products.
+  - Added a round-robin boost run endpoint.
+
+  ## Improvements
+
+  - Product boost state is tracked per product in the `products` table.
+  - Added a dedicated product boosting table to the admin dashboard.
+</Update>
+
+<Update label="2024-06-10" description="v2.1.0" tags={["feature","improvement"]}>
+  ## New Features
+
+  - Added support for multiple labeled, ordered redemption URLs per model.
+  - Added a public redemption directory at `/r/:directory_key` for multi-URL models.
+  - Added the directory resolution endpoint `GET /api/redemption/directories/:directory_key`.
+
+  ## Improvements
+
+  - Added the `product_model_redemption_urls` table through a database migration.
+  - Extended redemption URL length support through a database migration.
+  - Added the following URL resolution priority chain: multi-URL directory, single model URL, product URL, then `CONTACT_SELLER_REQUIRED`.
+</Update>
+
+<Update label="2024-04-01" description="v2.0.0" tags={["feature","breaking"]}>
+  ## New Features
+
+  - Rewrote the platform with Bun, Express 5, and TypeScript.
+  - Added a PostgreSQL 17 database with `sellers`, `shops`, `products`, and `product_models` tables.
+  - Added Redis 7 and BullMQ for background job processing.
+  - Added JWT authentication with `ADMIN` and `SELLER` roles.
+  - Added the Shopee OAuth flow with an automatic token refresh worker.
+  - Added product synchronization with incremental and full modes.
+  - Added a public redemption portal for buyer order lookup.
+  - Added an admin dashboard built with React 19, Vite, Tailwind CSS, and Radix UI.
+  - Added Docker Compose orchestration for all services.
 
   ## Breaking Changes
 
-  - Updated API endpoints from `/v0/redeem` to `/v1/redeem`. Update your integrations.
+  - Replaced v1 API endpoints and updated all paths to use the `/api/` prefix.
+  - Rebuilt the database schema. v1 data is not compatible with v2.
 </Update>
 
-## Upgrade Process
+<Update label="2024-01-15" description="v1.0.0" tags={["feature"]}>
+  ## New Features
 
-Follow these steps to upgrade to the latest version.
+  - Added the initial auto-redeem system, which accepts a Shopee order ID and returns redemption links.
+  - Added basic Shopee integration for order lookup.
+  - Added product-level redemption URL configuration.
+</Update>
 
-<Steps>
-  <Step title="Check Current Version" icon="info" title-type="p">
-    Run the version check command.
-
-    ```bash
-    wally version
-    ```
-  </Step>
-
-  <Step title="Update CLI" icon="download" title-type="p">
-    Install the latest release.
-
-    <CodeGroup show-lines="true">
-      ```bash
-      npm install -g wally-and-cody@latest
-      ```
-
-      ```bash
-      yarn global add wally-and-cody@latest
-      ```
-    </CodeGroup>
-  </Step>
-
-  <Step title="Verify Update" icon="check-circle" title-type="p">
-    Confirm the new version.
-
-    ```bash
-    wally version
-    ```
-
-    Expect output like `v1.2.0`.
-  </Step>
-</Steps>
-
-## Upcoming Improvements
-
-Track our roadmap for Wally And Cody enhancements.
-
-<Board uid="a793a201-360c-4b74-96f9-79bae1db8f59" title="Roadmap">
-  <BoardColumn title="Planned" uid="4a27d71e-01f3-4605-a7cd-f0169bb0a662" color="0" icon="calendar">
-    <BoardCard title="Multi-platform support" uid="0fb13ab0-c542-4d6a-9369-ac8043fd343e" description="Extend to Lazada and Tokopedia order IDs" icon="globe" due-date="2024-11-15" />
-
-    <BoardCard title="Webhook integrations" uid="bfd5cb58-a787-4d3b-b1c5-39e42ee50deb" description="Real-time notifications to Discord/Slack" icon="zap" />
-  </BoardColumn>
-
-  <BoardColumn title="In Progress" uid="b0aa34e9-eb32-49f4-80ff-9092258f8a64" color="1" icon="loader-2">
-    <BoardCard title="AI order validation" uid="4683fff1-cc46-4de9-9d55-12f3984ce2f3" description="Smart detection of redeemable vouchers" icon="brain" author="Dev Team" />
-  </BoardColumn>
-
-  <BoardColumn title="Backlog" uid="4f85048b-ad0e-4c48-b4e3-f04dc8624465" color="2" icon="package">
-    <BoardCard title="Enterprise dashboard" uid="c02edc3a-ebb5-4e94-a605-b60fdc845617" description="Team accounts and usage limits" created-at="2024-10-01" />
-  </BoardColumn>
-</Board>
-
-<Columns cols="2">
-  <Card title="Report Issues" href="https://github.com/wallyandcody/issues" icon="bug" horizontal="false">
-    Found a bug? Submit it on GitHub.
-  </Card>
-
-  <Card title="Request Features" href="https://github.com/wallyandcody/discussions" icon="sparkle" horizontal="false">
-    Suggest new ideas in discussions.
-  </Card>
-</Columns>
-
-<Callout kind="tip" collapsed="false">
-  This changelog focuses on user-facing changes. View full commit history on GitHub for technical details.
+<Callout kind="info" collapsed="false">
+  The full commit history is available on [GitHub](https://github.com/Wally-And-Cody/Shopee_AutoRedeemer_v2).
 </Callout>
 
+<Callout kind="tip" collapsed="false">
+  Review the [current feature overview](/features) or [system design](/architecture).
+</Callout>

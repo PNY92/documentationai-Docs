@@ -1,0 +1,78 @@
+---
+title: "Product Boosting"
+description: "Enable products for Shopee boosting, run round-robin campaigns, and manage boost state through the API."
+---
+
+## Product boosting
+
+Product boosting increases Shopee product visibility through the Shopee boost API. Sellers select which products to boost, and the platform runs round-robin campaigns that cycle through the selected products to maximize exposure.
+
+## Enabling products for boosting
+
+Mark products as eligible for boosting with a `PUT` request. Send the product IDs and enable flag:
+
+```bash
+curl -X PUT http://localhost:8080/api/products/boost-selection \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example" \
+  -d '{
+    "product_ids": [1, 2, 3],
+    "enabled": true
+  }'
+```
+
+This updates the boost state on each product in the `products` table. Disabled products are excluded from round-robin runs.
+
+## Running a boost campaign
+
+Trigger a round-robin boost across all enabled products. The backend calls the Shopee boost API for each selected product in sequence:
+
+```bash
+curl -X POST http://localhost:8080/api/products/boost/run \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example"
+```
+
+<Callout kind="info">
+
+Round-robin boosting cycles through enabled products so that each product gets a turn in the Shopee boost rotation. This prevents any single product from consuming all available boost slots.
+
+</Callout>
+
+## Boost state
+
+Each product tracks its boost state in the `products` table. The state includes whether the product is enabled for boosting and its position in the round-robin cycle. The admin dashboard displays boost state in the product boosting table.
+
+## Managing boost selection
+
+To remove a product from boosting, disable it:
+
+```bash
+curl -X PUT http://localhost:8080/api/products/boost-selection \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example" \
+  -d '{
+    "product_ids": [2],
+    "enabled": false
+  }'
+```
+
+<Callout kind="alert">
+
+Shopee imposes limits on the number of products that can be boosted per cycle. Check the Shopee Open Platform documentation for current limits before selecting a large number of products.
+
+</Callout>
+
+## Boosting via the admin dashboard
+
+The admin dashboard provides a dedicated product boosting table where sellers can:
+
+- Toggle boost eligibility per product
+- View the current boost state
+- Trigger round-robin boost campaigns
+- Monitor boost results
+
+<Callout kind="tip">
+
+See the [full feature overview](/features) for related platform capabilities, or open the [API reference](/api-reference) for endpoint details.
+
+</Callout>

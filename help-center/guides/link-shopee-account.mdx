@@ -1,23 +1,79 @@
 ---
 title: Link Your Shopee Account
-description: Connect Shopee for easy redeem link generation.
+description: Connect your Shopee shop to the platform by creating a shop with partner credentials and completing the OAuth authorization flow.
 ---
 
-## Overview
+Connecting your Shopee shop allows the platform to sync products, manage redemption URLs, and validate buyer orders. This guide walks through creating a shop and completing the Shopee OAuth authorization.
 
-Linking your Shopee account to Wally And Cody streamlines redeem link requests.
+## Prerequisites
+
+<Callout kind="info">
+
+Before you begin, you need:
+
+- An admin account on the platform
+- Your Shopee Open Platform partner ID, partner key, and shop ID
+- The Shopee redirect URI configured in your backend environment
+
+</Callout>
+
+## Linking steps
 
 <Steps>
-  <Step title="Go to Account Settings">
-    Log in at [wallyandcody.com](https://wallyandcody.com), then click your profile and select "Settings".
+  <Step title="Log In to the Admin Dashboard" icon="log-in">
+
+    Open the admin dashboard in your browser and log in with your admin credentials.
+
   </Step>
-  <Step title="Choose 'Link Shopee'">
-    Click the 'Link Shopee Account' button.
+  <Step title="Create a Shop" icon="store">
+
+    Navigate to Shop Management and create a new shop. Enter your Shopee partner ID, partner key, and shop ID. Associate the shop with your seller account.
+
   </Step>
-  <Step title="Authorize Access">
-    Follow the Shopee OAuth prompts and authorize Wally And Cody.
+  <Step title="Request Authorization URL" icon="link">
+
+    From the shop's token management section, request a Shopee authorization URL. This generates a URL that redirects you to Shopee's consent screen.
+
   </Step>
-  <Step title="Done!">
-    Your Shopee orders will now be available for quick redeem link generation.
+  <Step title="Approve in Shopee" icon="check-circle">
+
+    Open the authorization URL in your browser. Log in to Shopee and approve the platform's access request. Shopee will redirect back to the platform's callback URL.
+
+  </Step>
+  <Step title="Verify Token Health" icon="activity">
+
+    After the redirect completes, check the token health for your shop. This confirms that access and refresh tokens have been stored and are valid.
+
   </Step>
 </Steps>
+
+<Callout kind="success">
+
+Your shop is now connected. You can sync products, configure redemption URLs, and the background worker will automatically refresh tokens before they expire.
+
+</Callout>
+
+## Token auto-refresh
+
+Once authorized, the background worker scans for expiring tokens every 5 minutes and refreshes them automatically. You do not need to manually refresh tokens unless the worker is not running.
+
+<Callout kind="info">
+
+If `TOKEN_REFRESH_WORKER` is not set to `true` in the backend environment, tokens will expire and manual refresh will be required. See the [deployment guide](/configuration) for worker configuration.
+
+</Callout>
+
+## Troubleshooting
+
+If the OAuth flow fails, check the following:
+
+- Verify `SHOPEE_REDIRECT_URI` in `backend/.env` matches the callback URL registered in Shopee.
+- Check that the Shopee partner credentials are correct.
+- Ensure the admin dashboard origin is in `ALLOWED_CORS_HOSTNAMES`.
+- Check backend logs for OAuth callback errors.
+
+<Callout kind="tip">
+
+See the [seller shop management guide](/seller-shop-management) for the full API guide and [configuration guide](/configuration) for environment settings.
+
+</Callout>

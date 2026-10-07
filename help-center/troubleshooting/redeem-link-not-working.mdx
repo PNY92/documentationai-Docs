@@ -1,27 +1,73 @@
 ---
-title: Redeem Link Not Working
-description: What to do if your redeem link is invalid or expired.
+title: "Redeem Link Not Working"
+description: "Troubleshoot common issues when your Shopee order redemption link doesn't appear, is invalid, or shows a CONTACT_SELLER_REQUIRED warning."
 ---
 
-## Symptoms
+If you entered your Shopee order ID but didn't receive a redemption link, or the link doesn't work, follow these steps to diagnose the issue.
 
-- Link shows "Invalid or expired"
-- Cannot access documentation
+## No Links Returned
 
-## Quick Fix
+If the portal returns no redemption links:
 
 <Steps>
-  <Step title="Verify Order ID">
-    Make sure your Shopee order ID is correct (no spaces, copy from Shopee invoice).
+  <Step title="Verify Your Order ID" icon="search">
+
+Check that the order ID is copied exactly from Shopee. Go to **My Purchases** in Shopee and copy the order ID again. Avoid extra spaces or typos.
+
   </Step>
-  <Step title="Generate Again">
-    Visit https://wallyandcody.com/redeem and enter the order ID again to get a new link.
+  <Step title="Check Order Status" icon="activity">
+
+Your order must be in an eligible status for redemption. Allowed statuses are `READY_TO_SHIP`, `PROCESSED`, `RETRY_SHIP`, `SHIPPED`, `TO_CONFIRM_RECEIVE`, and `COMPLETED`.
+
+If your order is still pending payment or cancelled, it will not return redemption links.
+
   </Step>
-  <Step title="Check Expiry">
-    Links are valid for 24 hours; if expired, you must generate a fresh link.
+  <Step title="Check for Rate Limiting" icon="clock">
+
+The platform allows 20 requests per IP address per minute. If you've submitted multiple requests quickly, wait one minute and try again.
+
+  </Step>
+  <Step title="Contact the Seller" icon="mail">
+
+If none of the above resolves the issue, the order may belong to a shop that isn't connected to the platform. Contact the seller for assistance.
+
   </Step>
 </Steps>
 
-## Need help?
+## CONTACT_SELLER_REQUIRED warning
 
-Contact support if problems persist.
+This warning appears when the seller hasn't configured a redemption URL for the item you purchased. The platform found your order but has no link to return for that specific product.
+
+What to do:
+
+- Contact the seller directly.
+- Provide your order ID and the item name shown on the portal.
+- Ask the seller to configure the redemption URL for that product or model.
+
+<Callout kind="info">
+
+This is not a technical error. It means the seller needs to complete their product configuration. The platform is working correctly.
+
+</Callout>
+
+## Link opens but doesn't work
+
+If the redemption link appears but the destination doesn't load or is invalid:
+
+- The URL may have expired or been removed by the seller. Contact the seller.
+- Try opening the link in a different browser or incognito mode.
+- Check your internet connection and try again.
+- If the link redirects to a broken page, the seller may need to update the URL.
+
+## Directory page shows no links
+
+If you're on a redemption directory page such as `/r/:directory_key` and no links appear:
+
+- All URLs for this model may be inactive because the seller disabled them.
+- Contact the seller and ask them to activate at least one URL for that model.
+
+<Callout kind="tip">
+
+For the standard redemption flow, see [How to get a redeem link](/help-center/faq/get-redeem-link). For technical details about how the backend resolves orders, see [Buyer redemption](/buyer-redemption).
+
+</Callout>

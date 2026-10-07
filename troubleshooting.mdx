@@ -1,147 +1,168 @@
 ---
 title: Troubleshooting
-description: Common error codes, issues, and step-by-step fixes for redeem link generation problems.
+description: Resolve common platform issues — Shopee token expiry, product sync failures, redemption errors, rate limiting, CORS, and database connectivity.
 ---
 
-## Common Issues Overview
+## Diagnose platform issues
 
-Encountering problems with Wally And Cody? Most issues stem from order details, network conditions, or rate limits. Start by verifying your Shopee order ID format and checking your internet connection. Use the sections below for targeted fixes.
+Most platform issues fall into a few categories: Shopee token expiry, product sync failures, redemption lookup errors, and connectivity problems. Use this guide to diagnose and resolve them quickly.
+
+## Shopee token expiry
+
+Shopee access tokens expire periodically. If the worker is not running or tokens fail to refresh, API calls to Shopee will fail.
+
+<ExpandableGroup>
+  <Expandable title="Symptom: Sync or redemption returns a token error">
+
+  - Check that the worker is running:
+
+    ```bash
+    docker-compose ps
+    ```
+
+  - Verify `TOKEN_REFRESH_WORKER=true` is set in `backend/.env`.
+  - Manually refresh the token:
+
+    ```bash
+    curl "http://localhost:8080/api/shops/1/token/refresh" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example"
+    ```
+
+  - Check token health:
+
+    ```bash
+    curl "http://localhost:8080/api/token/health?shop_id=1" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example"
+    ```
+
+  </Expandable>
+
+  <Expandable title="Symptom: Worker not refreshing tokens">
+
+  - Verify `REDIS_HOST` and `REDIS_PORT` are correct in `backend/.env`.
+  - Check that Redis is running:
+
+    ```bash
+    docker-compose ps redis
+    ```
+
+  - Check worker logs:
+
+    ```bash
+    docker-compose logs worker
+    ```
+
+  - The `scan-due-shops` job runs every 5 minutes. Wait for the next run, then check token health again.
+
+  </Expandable>
+</ExpandableGroup>
+
+## Product sync failures
+
+Product sync depends on the worker, Redis, the Shopee API, and PostgreSQL. A failure at any stage can leave a sync pending, return no products, or produce a Shopee API error.
+
+<ExpandableGroup>
+  <Expandable title="Sync job stays in pending">
+
+  - Confirm that the worker is running and `TOKEN_REFRESH_WORKER=true` is set.
+  - Check Redis connectivity with `docker-compose ps redis`.
+  - Review worker errors:
+
+    ```bash
+    docker-compose logs worker
+    ```
+
+  </Expandable>
+
+  <Expandable title="Sync returns no products">
+
+  - Verify that the shop is authorized with `GET /api/token/health`.
+  - Check that the Shopee shop ID in the `shops` table is correct.
+  - Run a full sync instead of an incremental sync:
+
+    ```text
+    GET /api/sync-products?mode=full&shop_id=1
+    ```
+
+  </Expandable>
+
+  <Expandable title="Sync fails with a Shopee API error">
+
+  - Check token health and refresh the token if it has expired.
+  - Verify that `SHOPEE_ENVIRONMENT_HOSTNAME` targets the correct environment, either sandbox or production.
+  - Confirm that the Shopee partner credentials stored in the `shops` table are valid.
+
+  </Expandable>
+</ExpandableGroup>
+
+## Redemption errors
+
+Buyer redemption can fail or return warnings when the order cannot be found, the order status is not eligible, the product has no redemption URL, or the client has exceeded the request limit.
+
+| Issue | Cause | Resolution |
+|---|---|---|
+| Order not found | No shop has this order, or the order is too old | Verify the order ID and confirm that it belongs to a connected shop |
+| Order not redeemable | The order status is not in the allowed list | The order must be `READY_TO_SHIP`, `PROCESSED`, `RETRY_SHIP`, `SHIPPED`, `TO_CONFIRM_RECEIVE`, or `COMPLETED` |
+| `CONTACT_SELLER_REQUIRED` | No redemption URL is configured for the purchased item | Ask the seller to assign a URL through the admin dashboard or API |
+| Rate limit exceeded | More than 20 requests from one IP address in one minute | Wait one minute, then retry |
 
 <Callout kind="info">
-  Before diving in, clear your browser cache and try a different device. This resolves 80% of temporary glitches.
+  The redemption endpoint has an in-memory rate limit of 20 requests per IP per minute. The limit resets when the backend restarts.
 </Callout>
 
-## Error Codes Reference
+## CORS issues
 
-Refer to this table for quick lookup of error messages and initial actions.
+If the admin dashboard or public portal cannot reach the backend, check the allowed frontend origins in the backend configuration.
 
-| Error Code       | Message                          | Likely Cause                  | First Fix                     |
-|------------------|----------------------------------|-------------------------------|-------------------------------|
-| `ERR_INVALID_ID` | Invalid or malformed order ID   | Wrong format or typos        | Double-check Shopee order ID |
-| `ERR_EXPIRED`    | Order ID expired                | Voucher past redemption date | Use a recent order           |
-| `ERR_RATE_LIMIT` | Too many requests               | Exceeded daily limits        | Wait 15 minutes              |
-| `ERR_NETWORK`    | Connection timeout              | Unstable internet            | Switch networks              |
-| `ERR_FAILED`     | Link generation failed          | Server-side issue            | Retry after 5 minutes        |
+- Verify that `ALLOWED_CORS_HOSTNAMES` in `backend/.env` includes every frontend origin.
+- The admin dashboard typically runs at `http://localhost:5173`.
+- The public portal typically runs at `http://localhost:5174`.
+- Restart the backend after changing CORS settings:
 
-## Invalid or Expired Order ID Errors
+  ```bash
+  docker-compose restart backend
+  ```
 
-Shopee order IDs must be active and in the correct format (e.g., 12-digit number starting with 23xxxxxxxxxx).
+## Database connection issues
 
-<Steps>
-  <Step title="Verify Order ID" icon="search">
-    Log into Shopee. Go to "My Purchases" and copy the exact order ID. Ensure no extra spaces.
-  </Step>
-  <Step title="Check Expiry" icon="calendar">
-    Confirm the order date is within the last 30 days. Expired orders cannot generate redeem links.
-  </Step>
-  <Step title="Test Format" icon="code">
-````javascript
-// Valid example
-const orderId = "231234567890"; // 12 digits, starts with 23
+The backend requires a PostgreSQL connection. If PostgreSQL is unreachable, check the container status, connection values, and backend logs before running migrations.
 
-if (orderId.length === 12 && orderId.startsWith("23")) {
-  // Proceed
-}
-````
-  </Step>
-  <Step title="Retry Submission" icon="refresh-cw">
-    Paste into Wally And Cody and tap "Get redeem link".
-  </Step>
-</Steps>
+- Check that PostgreSQL is running:
+
+  ```bash
+  docker-compose ps db
+  ```
+
+- Verify `PG_HOST`, `PG_PORT`, `PG_DATABASE`, `PG_USER`, and `PG_PASSWORD` in `backend/.env`.
+- The database container exposes port `5432` internally and maps to host port `5435`.
+- Check backend logs:
+
+  ```bash
+  docker-compose logs backend
+  ```
+
+- If the database schema is not initialized, run migrations:
+
+  ```bash
+  docker-compose --profile migrate up -d migrate
+  ```
+
+## Redis connection issues
+
+The worker and BullMQ queue depend on Redis for job scheduling and processing. A Redis connection failure prevents token refresh and product sync jobs from running.
+
+- Check that Redis is running:
+
+  ```bash
+  docker-compose ps redis
+  ```
+
+- Verify `REDIS_HOST` and `REDIS_PORT` in `backend/.env`.
+- Redis maps to host port `6379`.
+- Check worker logs for Redis connection errors:
+
+  ```bash
+  docker-compose logs worker
+  ```
 
 <Callout kind="tip">
-  Copy-paste directly from Shopee to avoid typos. Manual entry often introduces errors.
-</Callout>
-
-## Failed Link Generation Solutions
-
-Failures can occur due to multiple reasons. Use these tabs to match your symptoms.
-
-<Tabs>
-  <Tab title="Server Busy" icon="server">
-    High traffic causes temporary overloads.
-    
-    <Steps>
-      <Step title="Wait and Retry">
-        Pause for 5-10 minutes, then try again.
-      </Step>
-      <Step title="Use Incognito">
-        Open an incognito window to bypass cache issues.
-      </Step>
-    </Steps>
-  </Tab>
-  <Tab title="Voucher Unavailable" icon="ticket">
-    The linked voucher is out of stock or redeemed.
-    
-    <Expandable title="Advanced Check" default-open="false">
-      Visit the product page on Shopee. Look for "Voucher redeemed" or "Sold out" badges.
-    </Expandable>
-  </Tab>
-  <Tab title="Account Restrictions" icon="shield">
-    Your Shopee account may have limits.
-    
-    ```bash
-    # Check Shopee account status via app
-    # Navigate to Account > Security > Restrictions
-    ```
-  </Tab>
-</Tabs>
-
-## Network and Rate Limit Issues
-
-<Columns cols={2}>
-  <Card title="Rate Limits" icon="clock" href="#">
-    You hit the daily cap (50 requests). Reset occurs at midnight UTC.
-  </Card>
-  <Card title="Network Fixes" icon="wifi-off" href="#">
-    Test speed at speedtest.net. Use mobile data as backup.
-  </Card>
-</Columns>
-
-For rate limits:
-
-````bash
-# Wait indicator (conceptual)
-echo "Rate limited. Retry in 15m..."
-sleep 900
-# Submit again
-````
-
-<Expandable title="VPN Troubleshooting" default-open="false">
-  VPNs can trigger blocks. Disable temporarily:
-  
-  1. Turn off VPN.
-  2. Clear DNS cache: `ipconfig /flushdns` (Windows) or `sudo dscacheutil -flushcache` (macOS).
-  3. Retry.
-</Expandable>
-
-## When to Contact Support
-
-If basic fixes fail:
-
-<Board title="Support Flow">
-  <BoardColumn title="Self-Solve" color="0" icon="lightbulb">
-    <BoardCard title="Check FAQ" description="Review docs first" icon="book-open" />
-    <BoardCard title="Retry Later" description="Most issues auto-resolve" />
-  </BoardColumn>
-  <BoardColumn title="Contact Us" color="2" icon="mail">
-    <BoardCard title="Email Support" description="support@wallyandcody.com with order ID and screenshot" dueDate="24h" />
-    <BoardCard title="Live Chat" description="Available 9AM-6PM UTC" icon="message-circle" />
-  </BoardColumn>
-</Board>
-
-Provide your order ID, error code, browser, and timestamp for fastest resolution.
-
-```mermaid
-graph TD
-    A[Issue Occurs] --> B{Try Basic Fixes?}
-    B -->|Yes| C[Resolved?]
-    C -->|No| D[Advanced Steps]
-    D --> E[Still Fails?]
-    E -->|Yes| F[Contact Support]
-    F --> G[Resolution]
-```
-
-<Callout kind="alert">
-  Avoid sharing sensitive info like passwords. Screenshots of errors suffice.
+  For sync behavior, see [Product sync](/product-sync). For token management, see [Seller shop management](/seller-shop-management). For the buyer flow, see [Buyer redemption](/buyer-redemption).
 </Callout>

@@ -27,6 +27,11 @@
                 "title": "Quick Start",
                 "path": "quickstart",
                 "icon": "zap"
+              },
+              {
+                "title": "Architecture",
+                "path": "architecture",
+                "icon": "building-2"
               }
             ]
           },
@@ -38,6 +43,21 @@
                 "title": "Features",
                 "path": "features",
                 "icon": "star"
+              },
+              {
+                "title": "Authentication",
+                "path": "authentication",
+                "icon": "shield"
+              },
+              {
+                "title": "Configuration",
+                "path": "configuration",
+                "icon": "settings"
+              },
+              {
+                "title": "Deployment",
+                "path": "deployment",
+                "icon": "container"
               }
             ]
           },
@@ -45,6 +65,41 @@
             "group": "Guides",
             "icon": "compass",
             "pages": [
+              {
+                "title": "Seller & Shop Management",
+                "path": "seller-shop-management",
+                "icon": "store"
+              },
+              {
+                "title": "Product Sync",
+                "path": "product-sync",
+                "icon": "refresh-cw"
+              },
+              {
+                "title": "Redemption URLs",
+                "path": "redemption-urls",
+                "icon": "link"
+              },
+              {
+                "title": "Buyer Redemption",
+                "path": "buyer-redemption",
+                "icon": "shopping-bag"
+              },
+              {
+                "title": "Product Boosting",
+                "path": "product-boosting",
+                "icon": "trending-up"
+              },
+              {
+                "title": "Inventory Agent",
+                "path": "inventory-agent",
+                "icon": "bot"
+              },
+              {
+                "title": "MCP Server",
+                "path": "mcp-server",
+                "icon": "plug"
+              },
               {
                 "title": "Troubleshooting",
                 "path": "troubleshooting",
@@ -122,5 +177,6 @@
         ]
       }
     ]
-  }
+  },
+  "favicon": "https://blob-cdn.documentation.ai/org-9e5e7e8e-32f8-45d6-afb6-35fe38a5c0ce/doc-72095bc6-1c06-4cc3-9276-d4bd5b4e9077/1791377744017-fpwz8qbukr-favicon.svg?rasterize-bypass=true"
 }

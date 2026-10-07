@@ -1,0 +1,143 @@
+---
+title: Inventory Agent
+description: Set up the Inventory Agent to automatically match Google Drive files with products lacking redemption URLs using SKU, name, and optional semantic matching.
+---
+
+## How the Agent Works
+
+The Inventory Agent is an optional Bun/TypeScript service that automatically fills missing redemption URLs. It indexes Google Drive metadata, compares it against products and models that lack URLs, and submits safe assignments to the backend. The agent stores its state in SQLite and can run on a schedule.
+
+On each run, the agent performs the following workflow:
+
+1. Authenticates with the backend as a shop-scoped seller account.
+2. Polls the backend for products and models lacking redemption URLs.
+3. Reads Google Drive file and folder metadata.
+4. Matches targets against Drive items using priority rules.
+5. Submits safe matches through `POST /api/products/redemption-targets/batch`.
+6. Preserves existing URLs and fills only missing URLs.
+7. Leaves uncertain matches for manual review.
+
+<Callout kind="info">
+
+The agent only assigns URLs to products and models that have no redemption URL configured. Existing URLs are never overwritten.
+
+</Callout>
+
+## Matching priority
+
+The agent applies matching rules in strict priority order:
+
+1. **Previously approved matches:** Matches you confirmed in a prior run are applied automatically.
+2. **Exact SKU matches:** Drive file names containing the model's SKU.
+3. **Exact name matches:** Drive file or folder names matching the product or model name.
+4. **Optional OpenRouter semantic matching:** LLM-based fuzzy matching when exact rules fail.
+
+<Callout kind="tip">
+
+Semantic matching is disabled by default. Set `LLM_MATCHING=true` and provide an `OPENROUTER_API_KEY` to enable it.
+
+</Callout>
+
+## Setup
+
+Configure the agent in `inventory-agent/.env`.
+
+### Backend connection
+
+```bash
+BACKEND_URL=http://localhost:8080
+BACKEND_EMAIL=seller@acme.test
+BACKEND_PASSWORD=VioletHarbor_7mQ2pL9x
+```
+
+<Callout kind="alert">
+
+The agent must use a `SELLER` account scoped to a shop, not an `ADMIN` account. Admin accounts have access to all shops and may produce unexpected assignments.
+
+</Callout>
+
+### Google Drive configuration
+
+The agent supports two authentication modes for Google Drive:
+
+| Mode | Configuration |
+|---|---|
+| Service account | Set `GOOGLE_AUTH_MODE=service-account` and `GOOGLE_APPLICATION_CREDENTIALS` to the path of the service account JSON file. |
+| OAuth | Set `GOOGLE_AUTH_MODE=oauth` and provide `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REFRESH_TOKEN`. |
+
+Configure the Drive source and optional scope with the following variables:
+
+```bash
+SOURCE_PROVIDER=google-drive
+DRIVE_ROOT_IDS=1a2B3c4D5e6F7g8H9i0J,9k8L7m6N5o4P3q2R1s0T
+DRIVE_SHARED_DRIVE_ID=7u6V5w4X3y2Z1a0B
+```
+
+Set `DRIVE_ROOT_IDS` to the folders the agent should index. Set `DRIVE_SHARED_DRIVE_ID` when those folders belong to a shared drive.
+
+### Optional AI matching
+
+```bash
+LLM_MATCHING=false
+OPENROUTER_API_KEY=or-test-example_7xmk2q9r4v8n
+OPENROUTER_MODEL=openai/gpt-4o
+MATCH_MODE=auto
+AGENT_MAX_STEPS=20
+LLM_MAX_REQUESTS=50
+```
+
+Keep `LLM_MATCHING=false` to use deterministic matching only. When enabled, semantic matching runs after approved, SKU, and exact-name matching fail.
+
+## Scheduling and state
+
+The agent runs periodically based on the configured interval. State is persisted in SQLite to track approved matches and avoid reprocessing.
+
+<ParamField body="SCHEDULE_INTERVAL_SECONDS" param-type="integer" show-location="false">Run interval in seconds. The default is `3600`, or one hour.</ParamField>
+
+<ParamField body="STATE_PATH" param-type="string" show-location="false">Path to the SQLite state file. The default is `./state/agent.sqlite`.</ParamField>
+
+<ParamField body="BATCH_SIZE" param-type="integer" show-location="false">Number of assignments submitted in each backend batch. The default is `200`.</ParamField>
+
+<ParamField body="PAGE_SIZE" param-type="integer" show-location="false">Number of Drive items requested per API page. The default is `500`.</ParamField>
+
+<ParamField body="SOURCE_CONCURRENCY" param-type="integer" show-location="false">Number of concurrent Drive API requests. The default is `4`.</ParamField>
+
+## Running the Agent
+
+Start the agent manually or through a scheduler:
+
+```bash
+cd inventory-agent
+bun run src/cli.ts
+```
+
+The agent processes one run cycle and exits. For continuous operation, run it on a cron schedule that matches `SCHEDULE_INTERVAL_SECONDS`.
+
+## State management
+
+The agent stores local state in SQLite, including:
+
+- Previously approved matches, which are applied automatically in future runs.
+- Indexed Google Drive file metadata.
+- Matching run history.
+
+<Callout kind="info">
+
+The SQLite state file persists across runs. Delete it only when you want to reset the agent's matching memory and re-index from scratch.
+
+</Callout>
+
+## Safe assignment guarantees
+
+The batch assignment endpoint provides these safety guarantees:
+
+- Checks fingerprints to detect stale assignments when product data changes after the target is fetched.
+- Verifies the current configuration inside a database transaction.
+- Preserves existing URLs and never overwrites a configured URL.
+- Reports stale, missing, already-configured, and unsafe assignments individually in the response.
+
+<Callout kind="tip">
+
+For manual URL configuration, see [Redemption URLs](/redemption-urls). For the complete environment variable reference, see [Configuration](/configuration).
+
+</Callout>

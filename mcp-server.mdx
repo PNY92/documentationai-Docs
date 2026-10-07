@@ -1,0 +1,100 @@
+---
+title: MCP Server
+description: Set up the Model Context Protocol server for programmatic access to products, redemption URLs, sync, and token health via stdio or HTTP transport.
+---
+
+## MCP Server
+
+The MCP Server is an optional adapter that wraps the backend API with the Model Context Protocol. It enables AI assistants and automation tools to manage products, redemption URLs, and sync operations. The server supports stdio transport for local use and authenticated Streamable HTTP for remote access.
+
+## Configuration
+
+Configure the MCP server in `inventory-mcp/.env`:
+
+| Variable | Default | Description |
+|---|---|---|
+| `BACKEND_API_URL` | `http://127.0.0.1:8080/api` | Backend API URL. |
+| `BACKEND_EMAIL` | Required | Seller account email. |
+| `BACKEND_PASSWORD` | Required | Seller account password. |
+| `MCP_HTTP_KEY` | Required | Long random secret for HTTP bearer authentication. |
+| `MCP_HOST` | `127.0.0.1` | HTTP listen host. |
+| `MCP_PORT` | `8081` | HTTP listen port. |
+| `MCP_ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Allowed hostnames for HTTP requests. |
+| `MCP_ALLOWED_ORIGINS` | Empty | Allowed CORS origins. |
+
+<Callout kind="info">
+
+The MCP server authenticates as a single seller account and is scoped to one shop. It does not expose seller administration, boosting, stock changes, or Google Drive matching.
+
+</Callout>
+
+## Transport modes
+
+The server supports two transport modes.
+
+### Stdio transport
+
+Use stdio transport for local AI assistants and command-line tools. The server communicates over standard input and output:
+
+```bash
+cd inventory-mcp
+bun run src/index.ts
+```
+
+### HTTP transport
+
+Use HTTP transport for remote access. The server provides authenticated Streamable HTTP at `/mcp`. Start the HTTP server with:
+
+```bash
+cd inventory-mcp
+MCP_HOST=127.0.0.1 MCP_PORT=8081 bun run src/index.ts --http
+```
+
+Connect to `http://127.0.0.1:8081/mcp` with a Bearer token in the `Authorization` header. The token must match the configured `MCP_HTTP_KEY`.
+
+<Callout kind="alert">
+
+`MCP_HTTP_KEY` must be a long, random secret. Do not expose the HTTP endpoint without setting this key and configuring `MCP_ALLOWED_HOSTS`.
+
+</Callout>
+
+## Available tools
+
+The MCP server exposes the following tools:
+
+| Tool | Description |
+|---|---|
+| `list_products` | List all products for the configured shop. |
+| `get_product` | Get details for a specific product. |
+| `list_redemption_targets` | List products and models that lack redemption URLs. |
+| `set_product_redemption_link` | Set a redemption URL on a product. |
+| `set_variant_redemption_links` | Set one or more redemption URLs on a model. |
+| `assign_missing_redemption_links` | Batch-assign URLs to missing targets. |
+| `sync_products` | Trigger a full or incremental product sync. |
+| `get_sync_status` | Check the status of a running sync job. |
+| `get_token_health` | Check the Shopee token health for the shop. |
+
+## Use cases
+
+Common automation scenarios with the MCP server include:
+
+- AI assistants that manage product redemption URLs through natural language.
+- Automation scripts that sync products and check token health on a schedule.
+- CI/CD pipelines that verify redemption configuration before deployment.
+- Integrations with external inventory systems that need programmatic access.
+
+## Running via Docker
+
+The MCP server runs as an optional Docker Compose profile:
+
+```bash
+docker-compose --profile inventory-mcp up -d inventory-mcp
+```
+
+The container listens on port `8081`. Configure the environment variables in `inventory-mcp/.env` before starting the profile.
+
+<Callout kind="tip">
+
+See the [configuration reference](/configuration) for the full environment reference, or review the [Inventory Agent](/inventory-agent) guide for the Google Drive auto-matching service.
+
+</Callout>
