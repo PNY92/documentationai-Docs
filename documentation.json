@@ -11,6 +11,49 @@
   "navigation": {
     "tabs": [
       {
+        "tab": "For Sellers",
+        "icon": "briefcase",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "icon": "rocket",
+            "pages": [
+              {
+                "title": "Features",
+                "path": "features",
+                "icon": "star"
+              }
+            ]
+          },
+          {
+            "group": "Guides",
+            "icon": "compass",
+            "pages": [
+              {
+                "title": "Seller & Shop Management",
+                "path": "seller-shop-management",
+                "icon": "store"
+              },
+              {
+                "title": "Redemption URLs",
+                "path": "redemption-urls",
+                "icon": "link"
+              },
+              {
+                "title": "Buyer Redemption",
+                "path": "buyer-redemption",
+                "icon": "shopping-bag"
+              },
+              {
+                "title": "Product Boosting",
+                "path": "product-boosting",
+                "icon": "trending-up"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "tab": "For Developers",
         "icon": "braces",
         "groups": [
@@ -79,49 +122,6 @@
                 "title": "Troubleshooting",
                 "path": "troubleshooting",
                 "icon": "tool"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "For Sellers",
-        "icon": "briefcase",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "icon": "rocket",
-            "pages": [
-              {
-                "title": "Features",
-                "path": "features",
-                "icon": "star"
-              }
-            ]
-          },
-          {
-            "group": "Guides",
-            "icon": "compass",
-            "pages": [
-              {
-                "title": "Seller & Shop Management",
-                "path": "seller-shop-management",
-                "icon": "store"
-              },
-              {
-                "title": "Redemption URLs",
-                "path": "redemption-urls",
-                "icon": "link"
-              },
-              {
-                "title": "Buyer Redemption",
-                "path": "buyer-redemption",
-                "icon": "shopping-bag"
-              },
-              {
-                "title": "Product Boosting",
-                "path": "product-boosting",
-                "icon": "trending-up"
               }
             ]
           }

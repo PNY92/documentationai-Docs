@@ -1,150 +1,76 @@
 ---
 title: Buyer Redemption
-description: Submit a Shopee order ID on the public portal and receive matching redemption links instantly, with rate limiting and multi-link directories.
+description: What your buyers see when they redeem their purchase — and how to make sure they get their links.
 ---
 
 ## Buyer redemption
 
-The public redemption portal is the buyer-facing entry point. Enter a Shopee order ID to have the backend validate the order through Shopee, resolve redemption URLs, and return the results. No account or login is required.
-
-## Submitting an order ID
-
-The public portal accepts a Shopee order ID and submits it to the backend:
-
-<Request>
-
-```bash
-curl -X POST http://localhost:8080/api/redemption \
-  -H "Content-Type: application/json" \
-  -d '{"order_id": "240101ABCDEF123"}'
-```
-
-</Request>
-
-This endpoint is public. No authentication is required.
-
-## Response format
-
-A successful response contains a `response` array with redemption entries and a `warnings` array:
-
-<Response>
-
-```json
-{
-  "response": [
-    {
-      "shopee_item_id": 123,
-      "item_name": "Windows Pro License",
-      "shopee_model_id": 456,
-      "model_name": "Windows",
-      "quantity": 1,
-      "redeem_url": "https://redeem.acme.test/windows"
-    }
-  ],
-  "warnings": []
-}
-```
-
-</Response>
-
-Each redemption entry represents an order line matched to a product or model configured by the seller.
-
-## How the backend resolves orders
-
-The backend processes the order through these steps:
-
-1. Applies an in-memory rate limit of 20 attempts per IP per minute.
-2. Validates the order ID format with Zod.
-3. Searches connected shops through Shopee to find the order.
-4. Retrieves full order details from Shopee.
-5. Rejects orders that are missing or non-redeemable.
-6. Checks the order status against the allowed list.
-7. Aggregates duplicate order lines and quantities.
-8. Looks up local products by Shopee item ID.
-9. Looks up local models by Shopee model ID.
-10. Resolves the redemption URL using the priority chain.
-11. Returns redemption entries and warnings.
-
-## Allowed order statuses
-
-Only orders in the following statuses are eligible for redemption:
-
-| Status | Description |
-|---|---|
-| `READY_TO_SHIP` | Order is ready for shipping |
-| `PROCESSED` | Order has been processed |
-| `RETRY_SHIP` | Shipping retry pending |
-| `SHIPPED` | Order has been shipped |
-| `TO_CONFIRM_RECEIVE` | Awaiting buyer confirmation |
-| `COMPLETED` | Order is fully completed |
-
-## Rate limiting
-
-The redemption endpoint enforces an in-memory rate limit of 20 requests per IP address per minute. If you exceed this limit, the endpoint returns a rate limit error. Wait before submitting another request.
+When a buyer purchases from your Shopee shop, they need to get their product links. This page walks you through what buyers experience so you can make sure everything works smoothly.
 
 <Callout kind="info">
 
-The rate limit is in-memory and resets when the backend restarts. It protects the Shopee API from abuse without requiring buyer accounts.
+Only orders with certain statuses show redemption links. Eligible statuses include: **Ready to Ship**, **Processed**, **Shipping Retry**, **Shipped**, **Awaiting Confirmation**, and **Completed**. If a buyer can't find their links, their order may not have reached one of these statuses yet.
 
 </Callout>
 
-## Multi-link redemption directories
+<Steps>
+<Step title="Share the redemption portal URL with buyers" icon="share">
 
-When a product model has multiple active redemption URLs, the response contains a directory URL instead of a direct link. The directory URL follows this format:
+Give buyers the link to your public redemption portal. You can include it in your product description, Shopee chat messages, or order notes. Buyers do not need an account. They just need their Shopee order number.
 
-```text
-https://your-portal-host/r/:directory_key
-```
+> 📸 **Screenshot:** Redemption portal URL shared in a Shopee chat message or product description
 
-Open the directory URL in the public portal to view all active redemption links for the model in the configured order.
+</Step>
 
-The directory data is also available through the API:
+<Step title="Buyer enters their order ID" icon="search">
 
-```bash
-curl "http://localhost:8080/api/redemption/directories/:directory_key"
-```
+The buyer opens the portal, types their Shopee order number into the search field, and clicks **Search**. The portal checks the order against your Shopee shop and looks up the matching product links.
 
-A model with one active URL returns that URL directly. If the model has no configured URL, the backend falls back to the product-level URL when one exists.
+> 📸 **Screenshot:** Buyer portal with order ID input field and search button
 
-## Warnings
+</Step>
 
-The `warnings` array reports issues that did not prevent the response but require attention. The most common warning is:
+<Step title="Buyer receives their redemption links" icon="gift">
 
-| Warning | Cause | Action |
-|---|---|---|
-| `CONTACT_SELLER_REQUIRED` | No redemption URL is configured for the purchased item | Ask the seller to assign a redemption URL to the product or model |
+If you have configured redemption URLs for the purchased products, the buyer sees their links immediately. Each link shows the product name and variant. Buyers can open a link directly, copy individual links, copy all links at once, or download the results as a file.
 
-A warning can appear alongside successful redemption entries when only some order lines are configured.
+> 📸 **Screenshot:** Redemption results showing product links with copy and download buttons
 
-## Public portal UI
+</Step>
 
-The public portal renders the redemption flow for buyers:
+<Step title="Buyer sees a directory when multiple links exist" icon="folder">
 
-- Order ID input field and submit button
-- Redemption link display for each order line
-- Directory link display for multi-URL models
-- Warning messages for unconfigured items
-- Error messages for invalid or rate-limited requests
+When a product variant has multiple links, such as separate Windows, Mac, and Linux downloads, the buyer sees a directory page listing all available options with their labels. They can choose the one they need and open it.
 
-```mermaid
-sequenceDiagram
-    Buyer->>Portal: Enter order ID
-    Portal->>Backend: POST /api/redemption
-    Backend->>Shopee: Search & validate order
-    Shopee-->>Backend: Order details
-    Backend->>Database: Resolve products & URLs
-    Backend-->>Portal: Response + warnings
-    alt Single URL
-        Portal-->>Buyer: Show direct link
-    else Multiple URLs
-        Portal-->>Buyer: Show directory link
-    else No URL
-        Portal-->>Buyer: Show CONTACT_SELLER warning
-    end
-```
+> 📸 **Screenshot:** Directory page showing labeled download options for the buyer to choose from
 
-<Callout kind="tip">
+</Step>
 
-Sellers can configure product and model redemption links in [Redemption URLs](/redemption-urls). For common buyer issues, see [Troubleshooting](/troubleshooting).
+<Step title="What the CONTACT_SELLER warning means" icon="alert-triangle">
 
-</Callout>
+If the buyer sees a **Contact Seller** message, it means no redemption URL was found for the product or variant they purchased. To fix this, go to the **Redemption URLs** page in your dashboard and assign a URL to that product or variant. A warning can appear alongside successful links if only some items in the order are missing URLs.
+
+> 📸 **Screenshot:** Contact Seller warning shown on the buyer portal for an unconfigured product
+
+</Step>
+</Steps>
+
+Make sure all your products and variants have redemption URLs assigned to avoid the Contact Seller warning. Buyers can always reach out to you directly if they encounter issues.
+
+## Next steps
+
+<Columns cols={2}>
+
+<Card title="Redemption URLs" href="/redemption-urls" icon="link">
+
+Configure where buyers go after purchase.
+
+</Card>
+
+<Card title="Product Boosting" href="/product-boosting" icon="trending-up">
+
+Boost your product visibility on Shopee.
+
+</Card>
+
+</Columns>

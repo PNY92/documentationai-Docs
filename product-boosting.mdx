@@ -1,78 +1,57 @@
 ---
-title: "Product Boosting"
-description: "Enable products for Shopee boosting, run round-robin campaigns, and manage boost state through the API."
+title: Product Boosting
+description: Boost your product visibility on Shopee directly from the dashboard.
 ---
-
 ## Product boosting
 
-Product boosting increases Shopee product visibility through the Shopee boost API. Sellers select which products to boost, and the platform runs round-robin campaigns that cycle through the selected products to maximize exposure.
+Product boosting increases your product visibility on Shopee. This guide walks you through selecting products, enabling boosting, and running a boost campaign from the dashboard.
 
-## Enabling products for boosting
-
-Mark products as eligible for boosting with a `PUT` request. Send the product IDs and enable flag:
-
-```bash
-curl -X PUT http://localhost:8080/api/products/boost-selection \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example" \
-  -d '{
-    "product_ids": [1, 2, 3],
-    "enabled": true
-  }'
-```
-
-This updates the boost state on each product in the `products` table. Disabled products are excluded from round-robin runs.
-
-## Running a boost campaign
-
-Trigger a round-robin boost across all enabled products. The backend calls the Shopee boost API for each selected product in sequence:
-
-```bash
-curl -X POST http://localhost:8080/api/products/boost/run \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example"
-```
-
-<Callout kind="info">
-
-Round-robin boosting cycles through enabled products so that each product gets a turn in the Shopee boost rotation. This prevents any single product from consuming all available boost slots.
-
+<Callout kind="alert" collapsed="false">
+  Shopee limits the number of products you can boost at a time. Check your Shopee seller dashboard for your current boost limits before selecting a large number of products.
 </Callout>
 
-## Boost state
+<Steps>
+  <Step title="Open the product boosting page" icon="rocket" title-type="p">
+    Navigate to the **Product Boosting** section in your dashboard. You will see a list of all your synced products with their current boost status.
 
-Each product tracks its boost state in the `products` table. The state includes whether the product is enabled for boosting and its position in the round-robin cycle. The admin dashboard displays boost state in the product boosting table.
+    > 📸 **Screenshot:** Product boosting page showing the list of synced products and boost status column
+  </Step>
 
-## Managing boost selection
+  <Step title="Select products to boost" icon="check-square" title-type="p">
+    Check the box next to each product you want to boost. You can select multiple products at once. A counter shows how many products you have selected.
 
-To remove a product from boosting, disable it:
+    > 📸 **Screenshot:** Products selected with checkboxes and a selection counter
+  </Step>
 
-```bash
-curl -X PUT http://localhost:8080/api/products/boost-selection \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example" \
-  -d '{
-    "product_ids": [2],
-    "enabled": false
-  }'
-```
+  <Step title="Enable boosting for selected products" icon="toggle-right" title-type="p">
+    After selecting products, click **Enable Boost** to mark them as eligible for the next boost campaign. You can also disable boosting for a product by unchecking it and clicking **Disable Boost**.
 
-<Callout kind="alert">
+    > 📸 **Screenshot:** Enable Boost button highlighted with selected products shown
+  </Step>
 
-Shopee imposes limits on the number of products that can be boosted per cycle. Check the Shopee Open Platform documentation for current limits before selecting a large number of products.
+  <Step title="Run a boost campaign" icon="play" title-type="p">
+    Click **Run Boost** to start the campaign. The platform sends your selected products to Shopee for boosting. Products are boosted in turns so that each one gets fair exposure, and no single product takes all the boost slots.
 
-</Callout>
+    > 📸 **Screenshot:** Run Boost button and campaign in-progress indicator
+  </Step>
 
-## Boosting via the admin dashboard
+  <Step title="Review boosted and skipped products" icon="clipboard-check" title-type="p">
+    After the campaign finishes, review the results in the boost status column. Successfully boosted products show a success indicator. Skipped products show a reason, usually because you exceeded Shopee's boost limit. Remove skipped products from your selection and try again in the next cycle.
 
-The admin dashboard provides a dedicated product boosting table where sellers can:
+    > 📸 **Screenshot:** Boost results table showing boosted products with success status and skipped products with reasons
+  </Step>
+</Steps>
 
-- Toggle boost eligibility per product
-- View the current boost state
-- Trigger round-robin boost campaigns
-- Monitor boost results
+Boosting can be run periodically to keep your products visible on Shopee. Check back after each campaign to see which products were boosted successfully and which need attention.
 
-<Callout kind="tip">
+## Next steps
 
-See the [full feature overview](/features) for related platform capabilities, or open the [API reference](/api-reference) for endpoint details.
+<Columns cols="2">
+  <Card title="Seller & Shop Management" href="/seller-shop-management" icon="briefcase" horizontal="false">
+    Set up your seller account and link your Shopee shop.
+  </Card>
 
-</Callout>
+  <Card title="Redemption URLs" href="/redemption-urls" icon="link" horizontal="false">
+    Configure where buyers go after purchase.
+  </Card>
+</Columns>

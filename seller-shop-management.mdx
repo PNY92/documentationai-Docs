@@ -1,140 +1,76 @@
 ---
 title: Seller & Shop Management
-description: Create sellers with ADMIN or SELLER roles, register Shopee shops, authorize via OAuth, and monitor token health.
+description: Set up your seller account, link your Shopee shop, and authorize access — all from the dashboard.
 ---
 
 ## Seller and shop management
 
-Sellers are the platform's user accounts. Each seller can have one or more shops linked to the Shopee Open Platform. Administrators create sellers and shops, then sellers authorize their shops through Shopee OAuth.
-
-## Creating a seller
-
-Administrators create seller accounts with an `ADMIN` or `SELLER` role. Send a `POST` request to `/api/sellers` with the required fields.
-
-```bash
-curl -X POST http://localhost:8080/api/sellers \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.admin.token" \
-  -d '{
-    "email": "seller@acme.test",
-    "password": "securepassword",
-    "name": "Shop Seller",
-    "role": "SELLER"
-  }'
-```
-
-A successful request creates the seller account and makes it available for shop assignment.
+This guide walks you through setting up your seller account, linking your Shopee shop, and authorizing the platform to access your shop data.
 
 <Callout kind="info">
 
-`ADMIN` accounts have full access to all sellers, shops, and products. `SELLER` accounts are scoped to the shops assigned to them.
+There are two roles in the dashboard: **ADMIN** users can create seller accounts and manage all shops. **SELLER** users manage their own assigned shops and products. Ask your admin for access if you only have SELLER permissions.
 
 </Callout>
 
-## Managing sellers
-
-Administrators can list, update, and delete sellers. All seller endpoints require an `ADMIN` JWT.
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/sellers` | List all sellers |
-| `POST` | `/api/sellers` | Create a seller |
-| `PUT` | `/api/sellers/:id` | Update seller details |
-| `DELETE` | `/api/sellers/:id` | Delete a seller |
-
-## Creating a shop
-
-A shop connects a seller to a Shopee Open Platform account. Create the shop with the seller ID and the Shopee partner credentials assigned to the integration.
-
-```bash
-curl -X POST http://localhost:8080/api/shops \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.admin.token" \
-  -d '{
-    "seller_id": 1,
-    "shopee_partner_id": "123456",
-    "shopee_partner_key": "partner_key_example_8xk2m9q4",
-    "shopee_shop_id": "67890"
-  }'
-```
-
-The shop is created without Shopee access tokens. Authorize the shop through the OAuth flow before synchronizing products or using Shopee operations.
-
-## Managing shops
-
-Shop endpoints allow administrators to list, create, update, and delete shops.
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/shops` | List all shops |
-| `GET` | `/api/shops/:id` | Get a specific shop |
-| `POST` | `/api/shops` | Create a shop |
-| `PUT` | `/api/shops/:id` | Update shop details |
-| `DELETE` | `/api/shops/:id` | Delete a shop |
-
-## Authorizing a shop with Shopee
-
-After creating a shop, authorize it with Shopee to obtain access and refresh tokens.
-
 <Steps>
-<Step title="Get authorization URL" icon="link">
+<Step title="Log in to the dashboard" icon="login">
 
-Request an authorization URL for the shop.
+Navigate to your dashboard URL in your browser. Enter your email and password, then click **Log In**.
 
-```bash
-curl "http://localhost:8080/api/token/auth-url?shop_id=1" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.seller.token"
-```
-
-The response contains a Shopee authorization URL. Copy the URL before continuing.
+> 📸 **Screenshot:** Dashboard login page with email and password fields
 
 </Step>
 
-<Step title="Approve in Shopee" icon="check-circle">
+<Step title="Create a seller account" icon="user-plus">
 
-Open the authorization URL in a browser. Log in to Shopee and approve the platform's access request for the shop.
+This step requires an ADMIN account. Go to the **Seller & Shop Management** page and click **Add Seller**. Fill in the seller's name, email, and a temporary password. Set the role to **ADMIN** or **SELLER** based on what this person needs to do.
 
-Shopee redirects you to the configured callback after approval.
-
-</Step>
-
-<Step title="Store the tokens" icon="save">
-
-Shopee redirects to `/api/shopee/token/callback`. The backend exchanges the authorization code for access and refresh tokens, then stores the tokens and their expiry information in the `shops` table.
+> 📸 **Screenshot:** Add seller form with name, email, password, and role dropdown fields
 
 </Step>
 
-<Step title="Verify token health" icon="activity">
+<Step title="Create and link a Shopee shop" icon="shopping-bag">
 
-Check the shop's current token status and expiry information.
+This step requires an ADMIN account. On the same Seller & Shop Management page, click **Add Shop**. Select the seller this shop belongs to, then enter your **Shopee Partner ID**, **Partner Key**, and **Shop ID**. These details come from your Shopee Open Platform developer settings.
 
-```bash
-curl "http://localhost:8080/api/token/health?shop_id=1" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.seller.token"
-```
+> 📸 **Screenshot:** Add shop form showing seller dropdown, partner ID, partner key, and shop ID fields
 
-A successful response shows the current token health information for the shop. Confirm that the token is valid before starting a product synchronization.
+</Step>
+
+<Step title="Authorize the shop with Shopee" icon="check-circle">
+
+1. Find the shop you just created and click **Get Authorization URL**.
+2. Open the URL in your browser. Log in to Shopee if prompted, then click **Approve**.
+3. The platform automatically saves your access tokens. No manual step is needed. You should see a confirmation that authorization succeeded.
+
+> 📸 **Screenshot:** Authorization URL button and Shopee approval screen side by side
+
+</Step>
+
+<Step title="Check token health" icon="heart">
+
+On the Seller & Shop Management page, look at the **Token Status** column for each shop. A green **Valid** status means you are connected and ready to go. If the status shows **Expired**, click **Re-authorize** to get a new authorization URL and repeat Step 4.
+
+> 📸 **Screenshot:** Token health status column showing Valid and Expired states for different shops
 
 </Step>
 </Steps>
 
-## Managing Shopee tokens
+Once your shop is linked and authorized, you can sync products from Shopee, set up redemption URLs for buyers, and boost product visibility.
 
-The platform manages the Shopee token lifecycle automatically when the token refresh worker is enabled. Administrators and sellers can also refresh a shop's tokens manually.
+## Next steps
 
-```bash
-curl "http://localhost:8080/api/shops/1/token/refresh" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.seller.token"
-```
+<Columns cols={2}>
+<Card title="Redemption URLs" href="/redemption-urls" icon="link">
 
-<Callout kind="info">
+Configure where buyers go after purchase.
 
-The background worker scans for expiring tokens every five minutes and refreshes them automatically. Use manual refresh when the worker is not running or when you need an immediate refresh.
+</Card>
 
-</Callout>
+<Card title="Product Boosting" href="/product-boosting" icon="trending-up">
 
-<Callout kind="tip">
+Boost your product visibility on Shopee.
 
-Review [JWT authentication](/authentication) for login and token requirements. After authorization succeeds, continue with [product synchronization](/product-sync) to import products and variants from Shopee.
-
-</Callout>
+</Card>
+</Columns>

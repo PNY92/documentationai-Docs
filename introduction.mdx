@@ -1,65 +1,76 @@
 ---
 title: Introduction
-description: Discover how Wally And Cody automates Shopee product redemption — from order ID to instant delivery with a full-stack platform for sellers and buyers.
+description: >-
+  Discover how Wally And Cody automates Shopee product redemption — from order
+  ID to instant delivery with a full-stack platform for sellers and buyers.
 ---
-
 ## Wally And Cody
 
-<Image src="https://blob-cdn.documentation.ai/org-2ebb2ef5-dd91-493f-9938-283fbdb14c81/doc-d2a73d2e-4391-4446-a5c8-2d0b41b7c4c1/1774416239742-jgnpt0hlw7r-starter_img_1.starter_img_1?q=85&fm=auto&auto=compress%2Cformat" alt="Wally And Cody documentation" width="800" height="400" />
+<Image src="https://blob-cdn.documentation.ai/org-2ebb2ef5-dd91-493f-9938-283fbdb14c81/doc-d2a73d2e-4391-4446-a5c8-2d0b41b7c4c1/1774416239742-jgnpt0hlw7r-starter_img_1.starter_img_1?q=85&fm=auto&auto=compress%2Cformat" width="800" height="400" alt="Wally And Cody documentation" />
 
 Wally And Cody is a full-stack platform that automates Shopee product redemption. Sellers connect their shops, sync products, and attach digital redemption URLs. Buyers enter a Shopee order ID on the public portal and instantly receive their redemption links.
 
 ## Key Components
 
-<Columns cols={2}>
-  <Card title="Backend API" icon="server">
+<Columns cols="2">
+  <Card title="Backend API" icon="server" horizontal="false">
     Bun, Express, PostgreSQL, and Redis power shop connections, product synchronization, and redemption workflows.
   </Card>
-  <Card title="Admin Dashboard" icon="monitor">
+
+  <Card title="Admin Dashboard" icon="monitor" horizontal="false">
     React 19 tools for managing products, redemptions, shops, and seller operations.
   </Card>
-  <Card title="Public Redemption Portal" icon="shopping-bag">
+
+  <Card title="Public Redemption Portal" icon="shopping-bag" horizontal="false">
     A buyer-facing order lookup experience that returns the redemption links associated with a Shopee order.
   </Card>
-  <Card title="Inventory Agent" icon="bot">
+
+  <Card title="Inventory Agent" icon="bot" horizontal="false">
     Automatically matches inventory from Google Drive with products that need redemption URLs.
   </Card>
-  <Card title="MCP Server" icon="code">
+
+  <Card title="MCP Server" icon="code" horizontal="false">
     Programmatic access for connecting compatible tools and automating platform workflows.
   </Card>
-  <Card title="Background Worker" icon="refresh-cw">
+
+  <Card title="Background Worker" icon="refresh-cw" horizontal="false">
     Handles token refresh and product synchronization tasks outside the main request flow.
   </Card>
 </Columns>
 
 ## Who Is This For
 
-<Columns cols={2}>
-  <Card title="Sellers and administrators" icon="store">
+<Columns cols="2">
+  <Card title="Sellers and administrators" icon="store" horizontal="false">
     Manage connected shops, products, redemption URLs, and boosting operations from the admin dashboard.
   </Card>
-  <Card title="Buyers" icon="user">
+
+  <Card title="Buyers" icon="user" horizontal="false">
     Enter a Shopee order ID on the public portal and get the associated redemption links instantly.
   </Card>
 </Columns>
 
 ## Explore the Docs
 
-<Columns cols={2}>
-  <Card title="Quick Start" icon="book-open" href="/quickstart" horizontal>
+<Columns cols="2">
+  <Card title="Quick Start" href="/quickstart" icon="book-open" horizontal="false">
     Connect the platform and complete your first redemption workflow.
   </Card>
-  <Card title="Architecture" icon="layers" href="/architecture" horizontal>
+
+  <Card title="Architecture" href="/architecture" icon="layers" horizontal="false">
     Understand how the API, dashboards, portals, agents, and workers fit together.
   </Card>
-  <Card title="Features" icon="star" href="/features" horizontal>
+
+  <Card title="Features" href="/features" icon="star" horizontal="false">
     Review the platform capabilities available to sellers, administrators, and buyers.
   </Card>
-  <Card title="API Reference" icon="code" href="/api-reference" horizontal>
+
+  <Card title="API Reference" href="/api-reference" icon="code" horizontal="false">
     Find endpoints and integration details for programmatic access.
   </Card>
 </Columns>
 
-<Callout kind="tip">
+<Callout kind="tip" collapsed="false">
   Start with the [Quick Start](/quickstart) to connect your shop and run your first redemption workflow.
 </Callout>
+

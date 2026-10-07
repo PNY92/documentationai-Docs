@@ -1,92 +1,47 @@
 ---
 title: Features
-description: Explore the platform's core capabilities — automated product sync, multi-level redemption URLs, token management, boosting, inventory agent matching, and MCP integration.
+description: >-
+  Everything the platform helps sellers do — from syncing products to boosting
+  visibility on Shopee.
 ---
+## Manage your Shopee shop from one dashboard
 
-## Automate product redemption from sync to delivery
+Manage your Shopee shop, automatically send buyers their product links after purchase, and boost product visibility on Shopee from one dashboard. The platform keeps your shop tasks and buyer redemptions connected, so you spend less time handling them manually.
 
-The platform provides a complete toolkit for Shopee sellers to automate product redemption. From automatic token refresh to multi-URL redemption directories, every capability is designed to reduce manual work and speed up delivery to buyers.
+> 📸 **Screenshot:** Dashboard overview showing seller tools and main navigation
 
-<Columns cols={2}>
-  <Card title="Automated Product Sync" icon="refresh-cw" href="/product-sync">
-    Pull products, variants, prices, and stock from Shopee into PostgreSQL with incremental or full sync modes.
+## What you can do
+
+<Columns cols="2">
+  <Card title="Seller & Shop Management" href="/seller-shop-management" icon="briefcase" horizontal="false">
+    Set up your seller account, link your Shopee shop, and authorize access.
   </Card>
-  <Card title="Multi-Level Redemption URLs" icon="link" href="/redemption-urls">
-    Configure URLs at the product or model level, with support for multiple labeled links per model.
+
+  <Card title="Redemption URLs" href="/redemption-urls" icon="link" horizontal="false">
+    Configure where buyers go after purchase to get their product links.
   </Card>
-  <Card title="Token Auto-Refresh" icon="key" href="/token-refresh">
-    A background worker refreshes Shopee access tokens automatically before they expire.
+
+  <Card title="Buyer Redemption" href="/buyer-redemption" icon="shopping-bag" horizontal="false">
+    See what your buyers experience when they redeem their purchase.
   </Card>
-  <Card title="Product Boosting" icon="trending-up" href="/product-boosting">
-    Enable products for boosting and run round-robin campaigns through the Shopee API.
-  </Card>
-  <Card title="Public Redemption Portal" icon="shopping-bag" href="/buyer-redemption">
-    Buyers enter a Shopee order ID and receive matching redemption links instantly.
-  </Card>
-  <Card title="Inventory Agent" icon="bot" href="/inventory-agent">
-    Automatically match Google Drive files to products that lack redemption URLs.
-  </Card>
-  <Card title="MCP Server" icon="code" href="/mcp-server">
-    Access platform capabilities programmatically through Model Context Protocol automation tools.
-  </Card>
-  <Card title="Role-Based Access" icon="shield" href="/authentication">
-    Protect platform access with JWT authentication and ADMIN or SELLER roles.
+
+  <Card title="Product Boosting" href="/product-boosting" icon="trending-up" horizontal="false">
+    Boost your product visibility on Shopee.
   </Card>
 </Columns>
 
-## Automated product synchronization
+> 📸 **Screenshot:** Cards grid linking to seller guides
 
-Product sync pulls item data from the Shopee Open Platform into PostgreSQL. The backend submits a BullMQ job to Redis, and the background worker fetches and upserts products, models, prices, stock, and raw metadata. Sync runs in two modes:
+## How it works
 
-| Mode | Description |
-|---|---|
-| Full | Fetches and upserts all products from the shop. Use for initial sync. |
-| Incremental | Fetches only changed products since the last sync. Use for routine updates. |
+As a seller, you manage everything from your dashboard: sync products from Shopee, assign redemption links, and boost visibility. When a buyer purchases from your shop, they visit a simple public portal, enter their order number, and instantly receive the correct download or access link. The platform handles the connection between your Shopee shop and your buyers automatically.
 
-## Multi-level redemption URLs
+> 📸 **Screenshot:** How it works — dashboard to buyer portal flow
 
-Redemption URLs can be configured at two levels. Product-level URLs apply to the entire product. Model-level URLs apply to specific variants and support multiple labeled, ordered, active or inactive links. When a model has multiple active URLs, the backend generates a public redemption directory at `/r/:directory_key`.
+## Get started
 
-URL resolution follows this priority:
+Ready to begin? Start by setting up your seller account and linking your Shopee shop, then move on to configuring redemption URLs for your products.
 
-1. Multiple active model links: public redemption directory.
-2. Single active model link: that direct URL.
-3. No model link: product-level URL.
-4. No URL configured: `CONTACT_SELLER_REQUIRED` warning.
-
-## Token auto-refresh
-
-Shopee access tokens expire periodically. The background worker runs a scan every five minutes to find shops with expiring tokens and enqueues refresh jobs. This keeps shops authorized without manual intervention.
-
-<Callout kind="info">
-
-Token refresh is handled by the `scan-due-shops` job type. Worker concurrency is controlled by `TOKEN_REFRESH_WORKER_CONCURRENCY`.
-
-</Callout>
-
-## Product boosting
-
-Sellers can mark products for boosting and trigger round-robin campaigns. The backend calls the Shopee boost API for selected products, cycling through them to maximize visibility.
-
-## Buyer redemption flow
-
-The public portal is the buyer-facing entry point. Buyers submit a Shopee order ID, and the backend validates the order through Shopee, checks the order status against an allowlist, aggregates duplicate lines, resolves redemption URLs, and returns the results.
-
-```mermaid
-sequenceDiagram
-    Buyer->>Portal: Enter order ID
-    Portal->>Backend: POST /api/redemption
-    Backend->>Shopee: Validate order
-    Shopee->>Backend: Order details
-    Backend->>Database: Resolve products and URLs
-    Backend->>Portal: Response and warnings
-    Portal->>Buyer: Display redemption links
-```
-
-Allowed order statuses: `READY_TO_SHIP`, `PROCESSED`, `RETRY_SHIP`, `SHIPPED`, `TO_CONFIRM_RECEIVE`, `COMPLETED`.
-
-<Callout kind="tip">
-
-Start with the [quickstart](/quickstart), then review the [API reference](/api-reference) for endpoint details.
-
+<Callout kind="tip" collapsed="false">
+  New here? Start with [Seller & Shop Management](/seller-shop-management) to get your account and shop set up.
 </Callout>

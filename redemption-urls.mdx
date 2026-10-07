@@ -1,123 +1,94 @@
 ---
 title: "Redemption URLs"
-description: "Configure product-level and model-level redemption URLs, manage multiple labeled links per model, and use redemption directories."
+description: "Configure where buyers go after purchase to receive their product links."
 ---
 
-## Product-level URLs
+## Redemption URLs
 
-Redemption URLs are the destinations buyers receive when they look up an order. Configure them at the product level for simple products, or at the model level for products with variants. A model can have multiple labeled, ordered URLs, which the platform serves through a public redemption directory.
-
-Set a single redemption URL on a product. The URL is returned for all orders containing this product, regardless of the variant purchased.
-
-```bash
-curl -X POST http://localhost:8080/api/products/1/redeem_url \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwiZXhwIjoyMDAwMDAwMDAwfQ.signature_example" \
-  -d '{"redeem_url": "https://downloads.acme.test/redeem"}'
-```
-
-<Callout kind="info">
-
-Product-level URLs serve as a fallback when no model-level URL is configured for the purchased variant.
-
-</Callout>
-
-## Model-level URLs
-
-Products with variants, also called models, can have URLs configured per variant. Set a single URL on a specific model:
-
-```bash
-curl -X POST http://localhost:8080/api/products/1/models/2/redeem_url \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwiZXhwIjoyMDAwMDAwMDAwfQ.signature_example" \
-  -d '{"redeem_url": "https://downloads.acme.test/windows"}'
-```
-
-A model-level URL takes precedence over the product-level URL for orders containing that model.
-
-## Multiple URLs per model
-
-A model can have multiple labeled URLs with a defined order and active or inactive state. Replace the full URL list for a model with a `PUT` request:
-
-```bash
-curl -X PUT http://localhost:8080/api/products/1/models/2/redemption_urls \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwiZXhwIjoyMDAwMDAwMDAwfQ.signature_example" \
-  -d '{
-    "urls": [
-      {"label": "Windows Download", "url": "https://downloads.acme.test/windows", "sort_order": 1, "active": true},
-      {"label": "Mac Download", "url": "https://downloads.acme.test/mac", "sort_order": 2, "active": true},
-      {"label": "Linux Download", "url": "https://downloads.acme.test/linux", "sort_order": 3, "active": false}
-    ]
-  }'
-```
-
-`sort_order` controls the order in which active links appear to buyers. Updating this endpoint replaces the model's complete URL list, so include every link you want to keep.
-
-<Callout kind="info">
-
-Only active URLs are included in the redemption response. Inactive URLs are stored but not shown to buyers.
-
-</Callout>
-
-## Redemption directories
-
-When a model has multiple active URLs, the backend generates a public redemption directory at `/r/:directory_key`. Instead of returning a direct URL, the redemption response returns the directory URL. Buyers visit the directory to see all active links for that model.
-
-The directory endpoint returns the ordered active URL list:
-
-```bash
-curl "http://localhost:8080/api/redemption/directories/dir_8k2m4p7q"
-```
-
-The public portal renders this directory page at `/r/:directory_key` automatically.
-
-## URL resolution priority
-
-When a buyer submits an order ID, the backend resolves the redemption URL in this order:
-
-1. **Multiple active model links:** Return a public redemption directory URL at `/r/:directory_key`.
-2. **One active model link:** Return that direct URL.
-3. **No model link configured:** Return the product-level URL.
-4. **No URL configured:** Return a `CONTACT_SELLER_REQUIRED` warning to the buyer.
-
-## Batch assignment via redemption targets
-
-For shops with many products, use the batch assignment API to find and configure missing redemption URLs. The `GET /api/products/redemption-targets` endpoint lists products and models that lack redemption URLs. The `POST /api/products/redemption-targets/batch` endpoint applies safe assignments in a single transaction.
-
-List products and models that need URLs:
-
-```bash
-curl "http://localhost:8080/api/products/redemption-targets?shop_id=1" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwiZXhwIjoyMDAwMDAwMDAwfQ.signature_example"
-```
-
-Assign URLs to products or models:
-
-```bash
-curl -X POST http://localhost:8080/api/products/redemption-targets/batch \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAxIiwiZXhwIjoyMDAwMDAwMDAwfQ.signature_example" \
-  -d '{
-    "assignments": [
-      {"product_id": 1, "redeem_url": "https://downloads.acme.test/product-1"},
-      {"product_id": 2, "model_id": 5, "redeem_url": "https://downloads.acme.test/model-5"}
-    ]
-  }'
-```
-
-<Callout kind="info">
-
-The batch endpoint checks fingerprints and current configuration inside a transaction. Existing links are preserved, and stale, missing, or already-configured assignments are reported individually in the response.
-
-</Callout>
-
-## Inventory Agent auto-assignment
-
-The optional Inventory Agent can fill missing redemption URLs by matching products and models with Google Drive files. The agent submits safe matches through the batch assignment endpoint and leaves uncertain matches for manual review.
+Redemption URLs tell the platform where to send buyers after they purchase. You can set one link for an entire product, or different links for each variant.
 
 <Callout kind="tip">
 
-For the buyer-facing redemption flow, see [Buyer redemption](/buyer-redemption). To configure automated URL assignment, see [Inventory Agent](/inventory-agent).
+Plan your URLs before configuring them. If you sell software with Windows, Mac, and Linux versions, set up labeled URLs for each at the model level.
 
 </Callout>
+
+<Steps>
+<Step title="Understand product-level vs model-level URLs" icon="info">
+
+A **product-level URL** applies to all variants of a product. Every buyer who buys any version gets the same link.
+
+A **model-level URL** applies to a specific variant, such as a size or color. If you set both, the model-level URL takes priority for that variant. If no model-level URL exists, the product-level URL is used instead.
+
+> 📸 **Screenshot:** Diagram showing product-level URL vs model-level URLs for different variants
+
+</Step>
+
+<Step title="Set a single product-level URL" icon="link">
+
+Go to the **Products** page in your dashboard. Find the product you want to configure and click **Edit URLs**. Enter the URL in the product-level field, then click **Save**.
+
+This link will be shown to buyers for all variants of this product unless you set a model-level URL.
+
+> 📸 **Screenshot:** Product edit panel with the product-level URL field highlighted
+
+</Step>
+
+<Step title="Set a model-level URL for a specific variant" icon="list">
+
+In the product's URL editor, find the variant, or model, you want to configure. Enter the URL in that model's field and click **Save**.
+
+This link overrides the product-level URL for this specific variant only.
+
+> 📸 **Screenshot:** Model-level URL field for a specific variant within the product editor
+
+</Step>
+
+<Step title="Configure multiple labeled URLs for a model" icon="layers">
+
+For a single variant, you can add multiple URLs with labels, such as separate download links for Windows, Mac, and Linux.
+
+In the model's URL editor, click **Add URL**. Enter a label, such as **Windows Download**, paste the URL, set the display order, and toggle the link active or inactive. Repeat for each link you want to add. Only active links are shown to buyers.
+
+> 📸 **Screenshot:** Multiple labeled URLs listed for a single model variant with sort order and active toggles
+
+</Step>
+
+<Step title="Use batch assignment for many products" icon="copy">
+
+If you have many products that need URLs, use the batch assignment tool. On the **Products** page, select multiple products, then click **Batch Assign URLs**.
+
+Choose whether to set product-level or model-level URLs, enter the URL for each, and click **Apply**. The tool preserves existing links and only updates the ones you specify.
+
+> 📸 **Screenshot:** Batch assign URL dialog with multiple products selected and URL input fields
+
+</Step>
+
+<Step title="Optionally enable the Inventory Agent" icon="sparkles">
+
+The Inventory Agent can automatically match products to URLs based on files in your Google Drive. This option is useful if you have many similar products.
+
+Enable it from the **Inventory Agent** settings page in the dashboard. The agent suggests matches and leaves uncertain ones for you to review manually.
+
+> 📸 **Screenshot:** Inventory Agent settings page with enable toggle and match suggestions
+
+</Step>
+</Steps>
+
+Once your URLs are set, buyers will see them when they enter their order ID on the redemption portal. Make sure all your products and variants have URLs assigned to avoid the `CONTACT_SELLER` warning.
+
+<Callout kind="info">
+
+If a buyer sees a `CONTACT_SELLER` message, it means no URL was found for the product or variant they purchased. Go back to the **Products** page and assign a URL to that item.
+
+</Callout>
+
+## Next steps
+
+<Columns cols={1}>
+<Card title="Buyer Redemption" href="/buyer-redemption" icon="shopping-bag">
+
+See what your buyers experience when they redeem their purchase.
+
+</Card>
+</Columns>
